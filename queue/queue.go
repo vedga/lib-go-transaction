@@ -49,9 +49,21 @@ func (q *Queue[T]) Dequeue() (T, bool) {
 	}
 
 	item := q.items[0]
+
+	// Remove most element
+	return item, q.Drop()
+}
+
+// Drop most element
+func (q *Queue[T]) Drop() bool {
+	if q.IsEmpty() {
+		return false
+	}
+
 	// Используем slices.Delete для удаления первого элемента
 	q.items = slices.Delete(q.items, 0, 1)
-	return item, true
+
+	return true
 }
 
 // Peek возвращает элемент из начала очереди без удаления
