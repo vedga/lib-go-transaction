@@ -14,7 +14,7 @@ type Queue[T any] struct {
 // New создаёт новую пустую очередь
 func New[T any](capacity int) *Queue[T] {
 	return &Queue[T]{
-		items: make([]T, capacity),
+		items: make([]T, 0, capacity),
 	}
 }
 

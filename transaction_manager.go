@@ -31,6 +31,7 @@ func NewManager(taskProducers data.Producers, options ...data.Option) *Manager {
 			// Set manager before execute all other setup commands
 			return data.NewDescriptor[implementation](kind,
 				append([]data.Setup{
+					withConstructor(),
 					withTransactionManager(i),
 				}, setup...)...)
 		},
@@ -83,4 +84,9 @@ func (i *Manager) NewTask(kind string, setup ...data.Setup) (*data.Container, er
 	}
 
 	return i.taskManager.NewContainer(descriptor)
+}
+
+// GetTask return task from container
+func (i *Manager) GetTask(taskContainer *data.Container) Task {
+	return nil
 }

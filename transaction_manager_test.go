@@ -19,11 +19,11 @@ type (
 	}
 )
 
-func (i *taskA) Run(ctx context.Context, tx Transaction) error {
+func (i *taskA) Run(_ context.Context, _ Transaction) error {
 	return nil
 }
 
-func (i *taskB) Run(ctx context.Context, tx Transaction) error {
+func (i *taskB) Run(_ context.Context, _ Transaction) error {
 	return nil
 }
 
@@ -59,18 +59,6 @@ func TestManager_Transaction(t *testing.T) {
 					func(setup ...data.Setup) (*data.Descriptor, error) {
 						return data.NewDescriptor[taskB](kindB, setup...)
 					},
-					/*
-						kindA: func() Task {
-							return &taskA{
-								Int: -1,
-							}
-						},
-						kindB: func() Task {
-							return &taskB{
-								String: "hello",
-							}
-						},
-					*/
 				},
 			},
 			args: args{

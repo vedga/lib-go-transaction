@@ -14,12 +14,6 @@ type (
 		Run(ctx context.Context, tx Transaction) error
 	}
 
-	// TaskProducer function for task
-	//	TaskProducer func() Task
-
-	// TaskProducers declare producers map
-	//	TaskProducers map[string]TaskProducer
-
 	// TaskManager implementation
 	TaskManager struct {
 		dataManager *data.Manager
@@ -28,13 +22,6 @@ type (
 
 // NewTaskManager return task manager implementation
 func NewTaskManager(taskProducers data.Producers, options ...data.Option) *TaskManager {
-	//	dataProducers := make(data.Producers, len(taskProducers))
-	//	for key, producer := range taskProducers {
-	//		dataProducers[key] = func() any {
-	//			return producer()
-	//		}
-	//	}
-
 	// Validate producers
 	for _, producer := range taskProducers {
 		descriptor, e := producer()
@@ -81,15 +68,3 @@ func (i *TaskManager) NewContainer(descriptor *data.Descriptor) (*data.Container
 func (i *TaskManager) New(kind string, setup ...data.Setup) (*data.Descriptor, error) {
 	return i.dataManager.New(kind, setup...)
 }
-
-/*
-// NewTask return new task context
-func (i *TaskManager) NewTask(kind string) Task {
-	producer := i.dataManager.GetProducer(kind)
-	if producer == nil {
-		return nil
-	}
-
-	return producer().(Task)
-}
-*/
