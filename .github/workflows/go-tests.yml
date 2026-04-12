@@ -1,0 +1,50 @@
+name: Go Tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+
+jobs:
+  test:
+    name: Run Go tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.25'  # Укажите нужную версию Go
+
+      - name: Get dependencies
+        run: |
+          go mod download
+
+
+      - name: Run unit tests
+        run: go test -v ./...
+
+      - name: Run tests with race detector
+        run: go test -race -v ./...
+
+      - name: Run tests with coverage
+        run: go test -coverprofile=coverage.out -v ./...
+
+      - name: Convert coverage to XML
+        if: success() || failure()  # Выполняем даже при падении тестов
+        run: |
+          go install github.com/axw/gocov/gocov@latest
+          go install github.com/AlekSi/gocov-xml@latest
+          gocov convert coverage.out | gocov-xml > coverage.xml
+
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-go
