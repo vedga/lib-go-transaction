@@ -35,16 +35,16 @@ jobs:
       - name: Run tests with coverage
         run: go test -coverprofile=coverage.out -v ./...
 
-      - name: Convert coverage to XML
-        if: success() || failure()  # Выполняем даже при падении тестов
-        run: |
-          go install github.com/axw/gocov/gocov@latest
-          go install github.com/AlekSi/gocov-xml@latest
-          gocov convert coverage.out | gocov-xml > coverage.xml
-
-      - name: Upload coverage report
-        uses: codecov/codecov-action@v3
-        with:
-          file: ./coverage.xml
-          flags: unittests
-          name: codecov-go
+#      - name: Convert coverage to XML
+#        if: success() || failure()  # Выполняем даже при падении тестов
+#        run: |
+#          go install github.com/axw/gocov/gocov@latest
+#          go install github.com/AlekSi/gocov-xml@latest
+#          gocov convert coverage.out | gocov-xml > coverage.xml
+#
+#      - name: Upload coverage report
+#        uses: codecov/codecov-action@v3
+#        with:
+#          file: ./coverage.xml
+#          flags: unittests
+#          name: codecov-go
