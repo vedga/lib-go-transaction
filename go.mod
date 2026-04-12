@@ -5,6 +5,7 @@ go 1.25
 require (
 	github.com/huandu/go-clone/generic v1.7.3
 	github.com/stretchr/testify v1.11.1
+	go.uber.org/mock v0.6.0
 )
 
 require (

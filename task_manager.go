@@ -8,6 +8,8 @@ import (
 	"github.com/vedga/lib-go-transaction/data"
 )
 
+//go:generate mockgen -destination=mock/$GOFILE -source $GOFILE
+
 type (
 	// Task interface declaration
 	Task interface {

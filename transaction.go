@@ -11,6 +11,7 @@ import (
 	"github.com/vedga/lib-go-transaction/stack"
 )
 
+//go:generate mockgen -destination=mock/$GOFILE -source $GOFILE
 type (
 	// Transaction interface declaration
 	Transaction interface {
