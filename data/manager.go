@@ -103,25 +103,6 @@ func (i *Manager) Write(w io.Writer, descriptor *Descriptor) error {
 
 	// Encode container
 	return i.outerCoder(c).Write(w)
-
-	/*
-		kind := descriptor.kind
-
-		// May be removing this check for improve performance?
-		if _, e := i.New(kind); e != nil {
-			return e
-		}
-
-		b := &bytes.Buffer{}
-		if e := i.innerCoder(descriptor.value).Write(b); e != nil {
-			return fmt.Errorf(`encode payload error: %w`, e)
-		}
-
-		return i.outerCoder(&Container{
-			Kind:    kind,
-			Payload: b.Bytes(),
-		}).Write(w)
-	*/
 }
 
 // NewContainer return data exchange container
