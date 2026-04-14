@@ -107,7 +107,7 @@ func TestTransactionExecution(t *testing.T) {
 								gomock.Any(),
 								gomock.Any(),
 							).
-							Return(transaction.ErrRetryTask),
+							Return(transaction.NewRetryTaskError(1)),
 						// kindA - second attempt
 						ta.EXPECT().
 							Run(
@@ -266,7 +266,8 @@ func TestTransactionExecution(t *testing.T) {
 					return errors.Is(e, wantError)
 				})
 
-				if errors.Is(e, transaction.ErrRetryTask) {
+				var retryIndicator *transaction.RetryTaskError
+				if errors.As(e, &retryIndicator) {
 					// Restore transaction from backup
 					tx, e = m.Restore(backup)
 					assert.NoError(t, e)

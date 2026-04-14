@@ -36,11 +36,6 @@ type (
 	}
 )
 
-var (
-	// ErrRetryTask indicate transaction must be retried with current top task
-	ErrRetryTask = errors.New("retry task")
-)
-
 func withConstructor(ID string) data.Setup {
 	return data.NewSetup[implementation](func(o *implementation) error {
 		o.ID = ID
