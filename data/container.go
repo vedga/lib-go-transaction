@@ -16,8 +16,8 @@ type (
 	}
 )
 
-// Restore container from backup
-func Restore(raw Raw) (*Container, error) {
+// RestoreContainer from backup
+func RestoreContainer(raw Raw) (*Container, error) {
 	c := new(Container)
 
 	if e := jsonCoder(c).Read(bytes.NewBuffer(raw)); e != nil {

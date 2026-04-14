@@ -36,7 +36,7 @@ func TestContainer_Backup(t *testing.T) {
 			assert.NoError(t, e)
 
 			var got *Container
-			got, e = Restore(backup)
+			got, e = RestoreContainer(backup)
 			assert.NoError(t, e)
 
 			assert.Equal(t, tt.args.container, got)
