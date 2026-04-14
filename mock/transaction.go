@@ -79,6 +79,21 @@ func (mr *MockTransactionMockRecorder) AddTask(kind any, setup ...any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTask", reflect.TypeOf((*MockTransaction)(nil).AddTask), varargs...)
 }
 
+// Backup mocks base method.
+func (m *MockTransaction) Backup() (data.Raw, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Backup")
+	ret0, _ := ret[0].(data.Raw)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Backup indicates an expected call of Backup.
+func (mr *MockTransactionMockRecorder) Backup() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Backup", reflect.TypeOf((*MockTransaction)(nil).Backup))
+}
+
 // NewTask mocks base method.
 func (m *MockTransaction) NewTask(kind string, setup ...data.Setup) (*data.Container, error) {
 	m.ctrl.T.Helper()

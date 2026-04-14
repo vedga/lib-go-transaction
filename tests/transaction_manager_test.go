@@ -87,6 +87,23 @@ func TestManager_Transaction(t *testing.T) {
 			})
 
 			assert.Equal(t, tx, got)
+
+			// Backup transaction
+			var backup data.Raw
+			backup, e = got.Backup()
+			assert.NoError(t, e)
+
+			// Modify transaction
+			e = got.SetRollback()
+			assert.NoError(t, e)
+
+			assert.NotEqual(t, tx, got)
+
+			// Restore transaction
+			got, e = i.Restore(backup)
+			assert.NoError(t, e)
+
+			assert.Equal(t, tx, got)
 		})
 	}
 }

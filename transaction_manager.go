@@ -76,15 +76,46 @@ func WithTxIDProducer(producer func() string) Option {
 	}
 }
 
+// Backup transaction
+func (i *Manager) Backup(tx Transaction) (data.Raw, error) {
+	// Create new data descriptor with latest transaction manager version
+	descriptor, e := i.newDescriptor(tx)
+	if e != nil {
+		return nil, e
+	}
+
+	// Create descriptor backup
+	return i.txManager.Backup(descriptor)
+}
+
+// Restore transaction from backup
+func (i *Manager) Restore(raw data.Raw) (Transaction, error) {
+	descriptor, e := i.txManager.Restore(raw)
+	if e != nil {
+		return nil, fmt.Errorf(`restore transaction descriptor error: %w`, e)
+	}
+
+	return data.DescriptorValue[Transaction](descriptor)
+}
+
 // Write transaction to io.Writer
 func (i *Manager) Write(w io.Writer, tx Transaction) error {
 	// Create new data descriptor with latest transaction manager version
-	descriptor, e := i.txManager.New(kind, withClone(tx))
+	descriptor, e := i.newDescriptor(tx)
 	if e != nil {
-		return fmt.Errorf(`create transaction descriptor error: %w`, e)
+		return e
 	}
 
 	return i.txManager.Write(w, descriptor)
+}
+
+func (i *Manager) newDescriptor(tx Transaction) (*data.Descriptor, error) {
+	descriptor, e := i.txManager.New(kind, withClone(tx))
+	if e != nil {
+		return nil, fmt.Errorf(`create transaction descriptor error: %w`, e)
+	}
+
+	return descriptor, nil
 }
 
 // Read transaction from io.Reader

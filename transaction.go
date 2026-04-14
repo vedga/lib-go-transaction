@@ -20,6 +20,7 @@ type (
 		QueueRollbackTask(container *data.Container)
 		SetRollback() error
 		NewTask(kind string, setup ...data.Setup) (*data.Container, error)
+		Backup() (data.Raw, error)
 	}
 
 	implementation struct {
@@ -166,4 +167,9 @@ func (i *implementation) QueueRollbackTask(container *data.Container) {
 // NewTask return new task context at data exchange format
 func (i *implementation) NewTask(kind string, setup ...data.Setup) (*data.Container, error) {
 	return i.manager.NewTask(kind, setup...)
+}
+
+// Backup transaction
+func (i *implementation) Backup() (data.Raw, error) {
+	return i.manager.Backup(i)
 }
