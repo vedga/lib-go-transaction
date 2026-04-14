@@ -16,8 +16,10 @@ type (
 	Transaction interface {
 		Task
 		AddTask(kind string, setup ...data.Setup) error
+		AddRollbackTask(kind string, setup ...data.Setup) error
 		QueueTask(container *data.Container)
 		QueueRollbackTask(container *data.Container)
+		SetRollback() error
 		NewTask(kind string, setup ...data.Setup) (*data.Container, error)
 	}
 
@@ -79,26 +81,44 @@ func (i *implementation) Run(ctx context.Context, tx Transaction) error {
 		return errors.New("nested transactions are not supported")
 	}
 
-	if taskContainer, present := i.PendingTasks.PopFront(); present {
+	if task := i.nextTask(); task != nil {
+		// Task supported by this implementation
+		return task.Run(ctx, tx)
+	}
+
+	return nil
+}
+
+func (i *implementation) nextTask() Task {
+	var q *deque.Deque[*data.Container]
+	if i.RollbackIndicator {
+		q = i.RollbackStack
+	} else {
+		q = i.PendingTasks
+	}
+
+	if taskContainer, present := q.PopFront(); present {
 		// Not all tasks complete
 		// Note: task removed from current transaction at this point
 		if task := i.manager.GetTask(taskContainer); task != nil {
 			// Task supported by this implementation
-			return task.Run(ctx, tx)
+			return task
 		}
 	}
 
 	return nil
 }
 
-// Rollback transaction
-func (i *implementation) Rollback() {
+// SetRollback transaction indicator
+func (i *implementation) SetRollback() error {
 	if i.RollbackIndicator {
 		// Already at rollback state
-		return
+		return errors.New("invalid transaction state")
 	}
 
 	i.RollbackIndicator = true
+
+	return nil
 }
 
 // AddTask add task to the transaction
@@ -110,6 +130,19 @@ func (i *implementation) AddTask(kind string, setup ...data.Setup) error {
 
 	// Queue task for execution
 	i.QueueTask(container)
+
+	return nil
+}
+
+// AddRollbackTask add rollback task to the transaction
+func (i *implementation) AddRollbackTask(kind string, setup ...data.Setup) error {
+	container, e := i.NewTask(kind, setup...)
+	if e != nil {
+		return fmt.Errorf(`create new rollback task error: %w`, e)
+	}
+
+	// Queue task for execution
+	i.QueueRollbackTask(container)
 
 	return nil
 }

@@ -41,6 +41,25 @@ func (m *MockTransaction) EXPECT() *MockTransactionMockRecorder {
 	return m.recorder
 }
 
+// AddRollbackTask mocks base method.
+func (m *MockTransaction) AddRollbackTask(kind string, setup ...data.Setup) error {
+	m.ctrl.T.Helper()
+	varargs := []any{kind}
+	for _, a := range setup {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AddRollbackTask", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddRollbackTask indicates an expected call of AddRollbackTask.
+func (mr *MockTransactionMockRecorder) AddRollbackTask(kind any, setup ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{kind}, setup...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRollbackTask", reflect.TypeOf((*MockTransaction)(nil).AddRollbackTask), varargs...)
+}
+
 // AddTask mocks base method.
 func (m *MockTransaction) AddTask(kind string, setup ...data.Setup) error {
 	m.ctrl.T.Helper()
@@ -116,4 +135,18 @@ func (m *MockTransaction) Run(ctx context.Context, tx transaction.Transaction) e
 func (mr *MockTransactionMockRecorder) Run(ctx, tx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockTransaction)(nil).Run), ctx, tx)
+}
+
+// SetRollback mocks base method.
+func (m *MockTransaction) SetRollback() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetRollback")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetRollback indicates an expected call of SetRollback.
+func (mr *MockTransactionMockRecorder) SetRollback() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRollback", reflect.TypeOf((*MockTransaction)(nil).SetRollback))
 }
