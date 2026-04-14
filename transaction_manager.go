@@ -88,9 +88,25 @@ func (i *Manager) Backup(tx Transaction) (data.Raw, error) {
 	return i.txManager.Backup(descriptor)
 }
 
+// RestoreCheckRetry restore transaction and check if retry limit exceed
+func (i *Manager) RestoreCheckRetry(backup data.Raw, retryTaskError *RetryTaskError) (Transaction, error) {
+	tx, e := i.Restore(backup)
+	if e != nil {
+		return nil, e
+	}
+
+	// Check retry attempt.
+	// Note: this operation increase transaction internal retry counter
+	if e = tx.NextAttempt(retryTaskError); e != nil {
+		return nil, e
+	}
+
+	return tx, nil
+}
+
 // Restore transaction from backup
-func (i *Manager) Restore(raw data.Raw) (Transaction, error) {
-	descriptor, e := i.txManager.Restore(raw)
+func (i *Manager) Restore(backup data.Raw) (Transaction, error) {
+	descriptor, e := i.txManager.Restore(backup)
 	if e != nil {
 		return nil, fmt.Errorf(`restore transaction descriptor error: %w`, e)
 	}

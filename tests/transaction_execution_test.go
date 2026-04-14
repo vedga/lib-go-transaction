@@ -52,6 +52,7 @@ func TestTransactionExecution(t *testing.T) {
 		name string
 		args args
 	}{
+		// TODO: Add task retry test case
 		{
 			name: "Execute all tasks",
 			args: args{
@@ -269,7 +270,7 @@ func TestTransactionExecution(t *testing.T) {
 				var retryIndicator *transaction.RetryTaskError
 				if errors.As(e, &retryIndicator) {
 					// Restore transaction from backup
-					tx, e = m.Restore(backup)
+					tx, e = m.RestoreCheckRetry(backup, retryIndicator)
 					assert.NoError(t, e)
 
 					// Required task retry execution

@@ -21,6 +21,7 @@ type (
 		SetRollback() error
 		NewTask(kind string, setup ...data.Setup) (*data.Container, error)
 		Backup() (data.Raw, error)
+		NextAttempt(retryTaskError *RetryTaskError) error
 	}
 
 	implementation struct {
@@ -29,6 +30,8 @@ type (
 		ID string
 		// RollbackIndicator if true currant action is transaction rollback
 		RollbackIndicator bool
+		// Attempt of task execution
+		Attempt uint
 		// PendingTasks contain tasks sequence for execute transaction
 		PendingTasks *deque.Deque[*data.Container]
 		// RollbackStack contain transaction rollback sequence
@@ -84,7 +87,12 @@ func (i *implementation) Run(ctx context.Context, tx Transaction) error {
 
 	if task := i.nextTask(); task != nil {
 		// Task supported by this implementation
-		return task.Run(ctx, tx)
+		if e := task.Run(ctx, tx); e != nil {
+			return e
+		}
+
+		// Reset retry attempt
+		i.Attempt = 0
 	}
 
 	return nil
@@ -168,4 +176,18 @@ func (i *implementation) NewTask(kind string, setup ...data.Setup) (*data.Contai
 // Backup transaction
 func (i *implementation) Backup() (data.Raw, error) {
 	return i.manager.Backup(i)
+}
+
+// NextAttempt check if next retry attempt is possible
+// Note: This operation increase internal retry counter
+func (i *implementation) NextAttempt(retryTaskError *RetryTaskError) error {
+	i.Attempt++
+
+	if i.Attempt > retryTaskError.maxRetries {
+		// Retry limit exceed
+		return ErrRetryLimitExceeded
+	}
+
+	// Can retry transaction
+	return nil
 }

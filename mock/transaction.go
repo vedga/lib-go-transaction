@@ -114,6 +114,20 @@ func (mr *MockTransactionMockRecorder) NewTask(kind any, setup ...any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewTask", reflect.TypeOf((*MockTransaction)(nil).NewTask), varargs...)
 }
 
+// NextAttempt mocks base method.
+func (m *MockTransaction) NextAttempt(retryTaskError *transaction.RetryTaskError) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NextAttempt", retryTaskError)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// NextAttempt indicates an expected call of NextAttempt.
+func (mr *MockTransactionMockRecorder) NextAttempt(retryTaskError any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NextAttempt", reflect.TypeOf((*MockTransaction)(nil).NextAttempt), retryTaskError)
+}
+
 // QueueRollbackTask mocks base method.
 func (m *MockTransaction) QueueRollbackTask(container *data.Container) {
 	m.ctrl.T.Helper()
