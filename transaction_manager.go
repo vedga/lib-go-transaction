@@ -12,9 +12,13 @@ type (
 	// Manager implementation
 	Manager struct {
 		newID       func() string
+		dataOptions []data.Option
 		txManager   *TaskManager
 		taskManager *TaskManager
 	}
+
+	// Option is Manager configuration modifier
+	Option func(*Manager)
 )
 
 const (
@@ -22,13 +26,19 @@ const (
 )
 
 // NewManager return new transaction manager implementation
-func NewManager(taskProducers data.Producers, options ...data.Option) *Manager {
+func NewManager(taskProducers data.Producers, options ...Option) *Manager {
 	i := &Manager{
 		newID: func() string {
 			return uuid.New().String()
 		},
-		taskManager: NewTaskManager(taskProducers, options...),
 	}
+
+	// Apply options
+	for _, opt := range options {
+		opt(i)
+	}
+
+	i.taskManager = NewTaskManager(taskProducers, i.dataOptions...)
 
 	// Task manager for transaction itself
 	i.txManager = NewTaskManager(data.Producers{
@@ -43,6 +53,27 @@ func NewManager(taskProducers data.Producers, options ...data.Option) *Manager {
 	})
 
 	return i
+}
+
+// WithOuterCoder apply outer coder
+func WithOuterCoder(coder data.Coder) Option {
+	return func(i *Manager) {
+		i.dataOptions = append(i.dataOptions, data.WithOuterCoder(coder))
+	}
+}
+
+// WithInnerCoder apply inner coder
+func WithInnerCoder(coder data.Coder) Option {
+	return func(i *Manager) {
+		i.dataOptions = append(i.dataOptions, data.WithInnerCoder(coder))
+	}
+}
+
+// WithTxIDProducer apply custom transaction ID producer
+func WithTxIDProducer(producer func() string) Option {
+	return func(i *Manager) {
+		i.newID = producer
+	}
 }
 
 // Write transaction to io.Writer

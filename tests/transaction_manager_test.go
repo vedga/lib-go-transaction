@@ -12,6 +12,8 @@ import (
 )
 
 func TestManager_Transaction(t *testing.T) {
+	t.Parallel()
+
 	const (
 		kindA = `taskA`
 		kindB = `taskB`
@@ -29,7 +31,7 @@ func TestManager_Transaction(t *testing.T) {
 
 		setup struct {
 			taskProducers data.Producers
-			options       []data.Option
+			options       []transaction.Option
 		}
 		args struct {
 			setup func(tx transaction.Transaction)
@@ -43,7 +45,7 @@ func TestManager_Transaction(t *testing.T) {
 		readError  error
 	}{
 		{
-			name: "success",
+			name: "Write and read transaction",
 			setup: setup{
 				taskProducers: data.Producers{
 					func(setup ...data.Setup) (*data.Descriptor, error) {
@@ -64,6 +66,8 @@ func TestManager_Transaction(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			i := transaction.NewManager(tt.setup.taskProducers, tt.setup.options...)
 
 			tx := i.New()
