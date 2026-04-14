@@ -80,6 +80,18 @@ func (mr *MockTransactionMockRecorder) NewTask(kind any, setup ...any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewTask", reflect.TypeOf((*MockTransaction)(nil).NewTask), varargs...)
 }
 
+// QueueRollbackTask mocks base method.
+func (m *MockTransaction) QueueRollbackTask(container *data.Container) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "QueueRollbackTask", container)
+}
+
+// QueueRollbackTask indicates an expected call of QueueRollbackTask.
+func (mr *MockTransactionMockRecorder) QueueRollbackTask(container any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueueRollbackTask", reflect.TypeOf((*MockTransaction)(nil).QueueRollbackTask), container)
+}
+
 // QueueTask mocks base method.
 func (m *MockTransaction) QueueTask(container *data.Container) {
 	m.ctrl.T.Helper()

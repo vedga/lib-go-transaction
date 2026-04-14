@@ -1,31 +1,15 @@
-package transaction
+package tests
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	transaction "github.com/vedga/lib-go-transaction"
 	"github.com/vedga/lib-go-transaction/data"
+	mock "github.com/vedga/lib-go-transaction/mock"
 )
-
-type (
-	taskA struct {
-		Int int
-	}
-	taskB struct {
-		String string
-	}
-)
-
-func (i *taskA) Run(_ context.Context, _ Transaction) error {
-	return nil
-}
-
-func (i *taskB) Run(_ context.Context, _ Transaction) error {
-	return nil
-}
 
 func TestManager_Transaction(t *testing.T) {
 	const (
@@ -34,12 +18,21 @@ func TestManager_Transaction(t *testing.T) {
 	)
 
 	type (
+		taskA struct {
+			*mock.MockTask
+			Int int
+		}
+		taskB struct {
+			*mock.MockTask
+			String string
+		}
+
 		setup struct {
 			taskProducers data.Producers
 			options       []data.Option
 		}
 		args struct {
-			setup func(tx Transaction)
+			setup func(tx transaction.Transaction)
 		}
 	)
 	tests := []struct {
@@ -62,7 +55,7 @@ func TestManager_Transaction(t *testing.T) {
 				},
 			},
 			args: args{
-				setup: func(tx Transaction) {
+				setup: func(tx transaction.Transaction) {
 					_ = tx.AddTask(kindA)
 					_ = tx.AddTask(kindB)
 				},
@@ -71,7 +64,7 @@ func TestManager_Transaction(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			i := NewManager(tt.setup.taskProducers, tt.setup.options...)
+			i := transaction.NewManager(tt.setup.taskProducers, tt.setup.options...)
 
 			tx := i.New()
 
@@ -83,7 +76,7 @@ func TestManager_Transaction(t *testing.T) {
 				return errors.Is(e, tt.writeError)
 			})
 
-			var got Transaction
+			var got transaction.Transaction
 			got, e = i.Read(b)
 			assert.Condition(t, func() bool {
 				return errors.Is(e, tt.readError)
