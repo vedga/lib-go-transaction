@@ -114,7 +114,7 @@ func (i *Manager) Restore(raw Raw) (*Descriptor, error) {
 		return nil, fmt.Errorf(`backup container restore error: %w`, e)
 	}
 
-	return i.descriptorFromContainer(c)
+	return i.DescriptorFromContainer(c)
 }
 
 // NewContainer return data exchange container
@@ -146,10 +146,11 @@ func (i *Manager) Read(r io.Reader) (*Descriptor, error) {
 		return nil, fmt.Errorf(`read container error: %w`, e)
 	}
 
-	return i.descriptorFromContainer(c)
+	return i.DescriptorFromContainer(c)
 }
 
-func (i *Manager) descriptorFromContainer(c *Container) (*Descriptor, error) {
+// DescriptorFromContainer return data descriptor from container
+func (i *Manager) DescriptorFromContainer(c *Container) (*Descriptor, error) {
 	// When read data options not used
 	o, e := i.New(c.Kind)
 	if e != nil {

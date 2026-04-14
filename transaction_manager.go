@@ -154,6 +154,11 @@ func (i *Manager) NewTask(kind string, setup ...data.Setup) (*data.Container, er
 }
 
 // GetTask return task from container
-func (i *Manager) GetTask(taskContainer *data.Container) Task {
-	return nil
+func (i *Manager) GetTask(taskContainer *data.Container) (Task, error) {
+	taskDescriptor, e := i.taskManager.DescriptorFromContainer(taskContainer)
+	if e != nil {
+		return nil, fmt.Errorf(`invalid task container: %w`, e)
+	}
+
+	return data.DescriptorValue[Task](taskDescriptor)
 }

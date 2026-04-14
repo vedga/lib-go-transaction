@@ -86,6 +86,11 @@ func (i *TaskManager) NewContainer(descriptor *data.Descriptor) (*data.Container
 	return i.dataManager.NewContainer(descriptor)
 }
 
+// DescriptorFromContainer return data descriptor from container
+func (i *TaskManager) DescriptorFromContainer(c *data.Container) (*data.Descriptor, error) {
+	return i.dataManager.DescriptorFromContainer(c)
+}
+
 // New return new task descriptor
 func (i *TaskManager) New(kind string, setup ...data.Setup) (*data.Descriptor, error) {
 	return i.dataManager.New(kind, setup...)

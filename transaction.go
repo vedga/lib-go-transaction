@@ -37,8 +37,6 @@ type (
 )
 
 var (
-	// ErrContinueTransaction indicate transaction must be continued
-	ErrContinueTransaction = errors.New("continue transaction")
 	// ErrRetryTask indicate transaction must be retried with current top task
 	ErrRetryTask = errors.New("retry task")
 )
@@ -81,6 +79,9 @@ func withClone(tx Transaction) data.Setup {
 // Return values:
 // nil - no errors (task processed, current task not supported, transaction complete or being complete)
 // not nil - last task execution status
+// Predefined error ErrRetryTask indicate than transaction must be retried after some time. Suggested implementation
+// is backup transaction before calling Run() method and if got ErrRetryTask error restore original transaction from
+// the backup.
 func (i *implementation) Run(ctx context.Context, tx Transaction) error {
 	if tx != nil {
 		return errors.New("nested transactions are not supported")
@@ -105,7 +106,7 @@ func (i *implementation) nextTask() Task {
 	if taskContainer, present := q.PopFront(); present {
 		// Not all tasks complete
 		// Note: task removed from current transaction at this point
-		if task := i.manager.GetTask(taskContainer); task != nil {
+		if task, e := i.manager.GetTask(taskContainer); e == nil && task != nil {
 			// Task supported by this implementation
 			return task
 		}
