@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/google/uuid"
 	"github.com/vedga/lib-go-transaction/data"
 )
 
 type (
 	// Manager implementation
 	Manager struct {
+		newID       func() string
 		txManager   *TaskManager
 		taskManager *TaskManager
 	}
@@ -22,6 +24,9 @@ const (
 // NewManager return new transaction manager implementation
 func NewManager(taskProducers data.Producers, options ...data.Option) *Manager {
 	i := &Manager{
+		newID: func() string {
+			return uuid.New().String()
+		},
 		taskManager: NewTaskManager(taskProducers, options...),
 	}
 
@@ -31,7 +36,7 @@ func NewManager(taskProducers data.Producers, options ...data.Option) *Manager {
 			// Set manager before execute all other setup commands
 			return data.NewDescriptor[implementation](kind,
 				append([]data.Setup{
-					withConstructor(),
+					withConstructor(i.newID()),
 					withTransactionManager(i),
 				}, setup...)...)
 		},

@@ -19,6 +19,13 @@ func New[T any](capacity int) *Deque[T] {
 	}
 }
 
+// Clone return copy of original
+func Clone[T any](original *Deque[T]) *Deque[T] {
+	return &Deque[T]{
+		items: original.ToSlice(),
+	}
+}
+
 // MarshalJSON implementation of json.Marshaler interface
 func (d *Deque[T]) MarshalJSON() ([]byte, error) {
 	jsonData, e := json.Marshal(d.items)
@@ -121,7 +128,5 @@ func (d *Deque[T]) Clear() {
 
 // ToSlice возвращает копию элементов очереди в виде слайса
 func (d *Deque[T]) ToSlice() []T {
-	result := make([]T, len(d.items))
-	copy(result, d.items)
-	return result
+	return slices.Clone(d.items)
 }

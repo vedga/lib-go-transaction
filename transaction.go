@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	clone "github.com/huandu/go-clone/generic"
 	"github.com/vedga/lib-go-transaction/data"
 	"github.com/vedga/lib-go-transaction/deque"
 )
@@ -25,6 +24,8 @@ type (
 
 	implementation struct {
 		manager *Manager
+		// ID of the transaction
+		ID string
 		// RollbackIndicator if true currant action is transaction rollback
 		RollbackIndicator bool
 		// PendingTasks contain tasks sequence for execute transaction
@@ -41,8 +42,9 @@ var (
 	ErrRetryTask = errors.New("retry task")
 )
 
-func withConstructor() data.Setup {
+func withConstructor(ID string) data.Setup {
 	return data.NewSetup[implementation](func(o *implementation) error {
+		o.ID = ID
 		o.PendingTasks = deque.New[*data.Container](0)
 		o.RollbackStack = deque.New[*data.Container](0)
 
@@ -62,8 +64,10 @@ func withClone(tx Transaction) data.Setup {
 	return data.NewSetup[implementation](func(o *implementation) error {
 		if i, theSame := tx.(*implementation); theSame {
 			// Clone fields
-			o.PendingTasks = clone.Clone(i.PendingTasks)
-			o.RollbackStack = clone.Clone(i.RollbackStack)
+			o.ID = i.ID
+			o.RollbackIndicator = i.RollbackIndicator
+			o.PendingTasks = deque.Clone(i.PendingTasks)
+			o.RollbackStack = deque.Clone(i.RollbackStack)
 
 			return nil
 		}
