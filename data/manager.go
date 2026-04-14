@@ -23,15 +23,6 @@ type (
 	// Coder function
 	Coder func(o any) Serializable
 
-	// Raw data format
-	Raw = []byte
-
-	// Container for exchange information
-	Container struct {
-		Kind    string `json:"kind"`
-		Payload Raw    `json:"payload"`
-	}
-
 	// Manager implementation
 	Manager struct {
 		producersMap map[string]Producer
