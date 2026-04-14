@@ -3,6 +3,7 @@ package data
 import (
 	"bytes"
 	"fmt"
+	"io"
 )
 
 type (
@@ -37,4 +38,9 @@ func (i *Container) Backup() (Raw, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+// Reader return payload reader
+func (i *Container) Reader() io.Reader {
+	return bytes.NewReader(i.Payload)
 }

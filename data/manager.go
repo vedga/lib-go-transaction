@@ -96,6 +96,27 @@ func (i *Manager) Write(w io.Writer, descriptor *Descriptor) error {
 	return i.outerCoder(c).Write(w)
 }
 
+// Backup data descriptor
+func (i *Manager) Backup(descriptor *Descriptor) (Raw, error) {
+	c, e := i.NewContainer(descriptor)
+	if e != nil {
+		return nil, fmt.Errorf(`backup container build error: %w`, e)
+	}
+
+	// Backup data
+	return c.Backup()
+}
+
+// Restore from backup
+func (i *Manager) Restore(raw Raw) (*Descriptor, error) {
+	c, e := RestoreContainer(raw)
+	if e != nil {
+		return nil, fmt.Errorf(`backup container restore error: %w`, e)
+	}
+
+	return i.descriptorFromContainer(c)
+}
+
 // NewContainer return data exchange container
 func (i *Manager) NewContainer(descriptor *Descriptor) (*Container, error) {
 	kind := descriptor.kind
@@ -125,15 +146,17 @@ func (i *Manager) Read(r io.Reader) (*Descriptor, error) {
 		return nil, fmt.Errorf(`read container error: %w`, e)
 	}
 
+	return i.descriptorFromContainer(c)
+}
+
+func (i *Manager) descriptorFromContainer(c *Container) (*Descriptor, error) {
 	// When read data options not used
 	o, e := i.New(c.Kind)
 	if e != nil {
 		return nil, fmt.Errorf(`data can't be read: %w`, e)
 	}
 
-	b := bytes.NewBuffer(c.Payload)
-
-	if e = i.innerCoder(o.value).Read(b); e != nil {
+	if e = i.innerCoder(o.value).Read(c.Reader()); e != nil {
 		return nil, fmt.Errorf(`decode payload error: %w`, e)
 	}
 
