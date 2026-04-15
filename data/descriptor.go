@@ -10,7 +10,7 @@ type (
 	// Raw data format
 	Raw = []byte
 
-	// container representation
+	// container structure used only as encoding/decoding template for Descriptor entity
 	container struct {
 		Kind    string `json:"kind"`
 		Payload Raw    `json:"payload"`
