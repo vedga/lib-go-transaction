@@ -87,13 +87,12 @@ func (i *implementation) Run(ctx context.Context, tx Transaction) error {
 	}
 
 	if task := i.nextTask(); task != nil {
-		// Task supported by this implementation
-		if e := task.Run(ctx, tx); e != nil {
-			return e
-		}
-
-		// Reset retry attempt
+		// Task supported by this implementation, reset attempt counter because transaction may be backup in the
+		// task if outbox pattern is used.
 		i.Attempt = 0
+
+		// Execute task
+		return task.Run(ctx, tx)
 	}
 
 	return nil
