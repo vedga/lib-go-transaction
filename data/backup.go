@@ -13,7 +13,7 @@ type (
 	}
 )
 
-// Backup Serializable object
+// Backup Serializable object as Raw data type
 func Backup(o Serializable) (Raw, error) {
 	b := new(bytes.Buffer)
 	if e := o.Write(b); e != nil {
@@ -23,7 +23,7 @@ func Backup(o Serializable) (Raw, error) {
 	return b.Bytes(), nil
 }
 
-// Restore Serializable object
+// Restore Serializable object from Raw data type
 func Restore(o Serializable, s Raw) error {
 	return o.Read(bytes.NewBuffer(s))
 }
