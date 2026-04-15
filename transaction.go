@@ -21,7 +21,7 @@ type (
 		SetRollback() error
 		NewTask(kind string, setup ...data.Setup) (*data.Container, error)
 		Backup() (data.Raw, error)
-		NextAttempt(retryTaskError *RetryTaskError) error
+		NextAttempt(maxRetries uint) error
 	}
 
 	implementation struct {
@@ -180,10 +180,10 @@ func (i *implementation) Backup() (data.Raw, error) {
 
 // NextAttempt check if next retry attempt is possible
 // Note: This operation increase internal retry counter
-func (i *implementation) NextAttempt(retryTaskError *RetryTaskError) error {
+func (i *implementation) NextAttempt(maxRetries uint) error {
 	i.Attempt++
 
-	if i.Attempt > retryTaskError.maxRetries {
+	if i.Attempt > maxRetries {
 		// Retry limit exceed
 		return ErrRetryLimitExceeded
 	}

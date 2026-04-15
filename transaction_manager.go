@@ -97,8 +97,8 @@ func (i *Manager) RestoreCheckRetry(backup data.Raw, retryTaskError *RetryTaskEr
 
 	// Check retry attempt.
 	// Note: this operation increase transaction internal retry counter
-	if e = tx.NextAttempt(retryTaskError); e != nil {
-		return nil, e
+	if e = tx.NextAttempt(retryTaskError.maxRetries); e != nil {
+		return nil, fmt.Errorf(`%w: max %d`, e, retryTaskError.maxRetries)
 	}
 
 	return tx, nil
