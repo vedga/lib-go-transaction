@@ -1,7 +1,6 @@
 package data
 
 import (
-	"bytes"
 	"errors"
 	"testing"
 
@@ -64,19 +63,18 @@ func TestManager_Data(t *testing.T) {
 
 			i := NewManager(tt.setup.producers, tt.setup.options...)
 
-			b := &bytes.Buffer{}
-			e := i.Write(b, tt.args.descriptor)
+			raw, e := Backup(i.Coder(tt.args.descriptor))
 			assert.Condition(t, func() bool {
 				return errors.Is(e, tt.writeError)
 			})
 
-			var got any
-			got, e = i.Read(b)
+			var got Descriptor
+			e = Restore(i.Coder(&got), raw)
 			assert.Condition(t, func() bool {
 				return errors.Is(e, tt.readError)
 			})
 
-			assert.Equal(t, tt.args.descriptor, got)
+			assert.Equal(t, tt.args.descriptor, &got)
 		})
 	}
 }

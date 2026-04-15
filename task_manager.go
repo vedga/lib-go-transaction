@@ -2,8 +2,6 @@ package transaction
 
 import (
 	"context"
-	"fmt"
-	"io"
 
 	"github.com/vedga/lib-go-transaction/data"
 )
@@ -41,24 +39,9 @@ func NewTaskManager(taskProducers data.Producers, options ...data.Option) *TaskM
 	}
 }
 
-// Write task to io.Writer
-func (i *TaskManager) Write(w io.Writer, descriptor *data.Descriptor) error {
-	return i.dataManager.Write(w, descriptor)
-}
-
-// Read task from io.Reader
-func (i *TaskManager) Read(r io.Reader) (*data.Descriptor, error) {
-	o, e := i.dataManager.Read(r)
-	if e != nil {
-		return nil, e
-	}
-
-	// Verify type
-	if _, e = data.DescriptorValue[Task](o); e != nil {
-		return nil, fmt.Errorf("read invalid task: %w", e)
-	}
-
-	return o, nil
+// Coder return implementation for specified task data Descriptor
+func (i *TaskManager) Coder(descriptor *data.Descriptor) data.Serializable {
+	return i.dataManager.Coder(descriptor)
 }
 
 // New return new task descriptor

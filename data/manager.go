@@ -78,44 +78,49 @@ func WithInnerCoder(coder Coder) Option {
 	}
 }
 
-// Write data to io.Writer
-func (i *Manager) Write(w io.Writer, descriptor *Descriptor) error {
-	c := &container{
-		Kind: descriptor.kind,
-	}
+// Coder return implementation for specified data Descriptor
+func (i *Manager) Coder(descriptor *Descriptor) Serializable {
+	return newDescriptorCodec(
+		func(w io.Writer) error {
+			c := &container{
+				Kind: descriptor.kind,
+			}
 
-	var e error
-	if c.Payload, e = Backup(i.innerCoder(descriptor.value)); e != nil {
-		return fmt.Errorf(`encode container payload error: %w`, e)
-	}
+			var e error
+			if c.Payload, e = Backup(i.innerCoder(descriptor.value)); e != nil {
+				return fmt.Errorf(`encode container payload error: %w`, e)
+			}
 
-	// Encode container
-	if e = i.outerCoder(c).Write(w); e != nil {
-		return fmt.Errorf(`encode container error: %w`, e)
-	}
+			// Encode container
+			if e = i.outerCoder(c).Write(w); e != nil {
+				return fmt.Errorf(`encode container error: %w`, e)
+			}
 
-	return nil
-}
+			return nil
+		},
+		func(r io.Reader) error {
+			c := new(container)
 
-// Read data from io.Reader
-func (i *Manager) Read(r io.Reader) (*Descriptor, error) {
-	c := new(container)
+			if e := i.outerCoder(c).Read(r); e != nil {
+				return fmt.Errorf(`decode container error: %w`, e)
+			}
 
-	if e := i.outerCoder(c).Read(r); e != nil {
-		return nil, fmt.Errorf(`decode container error: %w`, e)
-	}
+			// Note: Setup not applied if descriptor restored from io.Reader
+			newDescriptor, e := i.New(c.Kind)
+			if e != nil {
+				return e
+			}
 
-	// Note: Setup not applied if descriptor restored from io.Reader
-	descriptor, e := i.New(c.Kind)
-	if e != nil {
-		return nil, e
-	}
+			if e = Restore(i.innerCoder(newDescriptor.value), c.Payload); e != nil {
+				return fmt.Errorf(`decode container payload error: %w`, e)
+			}
 
-	if e = Restore(i.innerCoder(descriptor.value), c.Payload); e != nil {
-		return nil, fmt.Errorf(`decode container payload error: %w`, e)
-	}
+			descriptor.kind = newDescriptor.kind
+			descriptor.value = newDescriptor.value
 
-	return descriptor, nil
+			return nil
+		},
+	)
 }
 
 // New return data descriptor by kind. For data entity applied passed optional setup.

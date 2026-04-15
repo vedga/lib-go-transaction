@@ -1,9 +1,7 @@
 package transaction
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 
 	"github.com/google/uuid"
 	"github.com/vedga/lib-go-transaction/data"
@@ -77,6 +75,11 @@ func WithTxIDProducer(producer func() string) Option {
 	}
 }
 
+// Encode transaction encoding
+func (i *Manager) Encode(txDescriptor *data.Descriptor) (data.Raw, error) {
+	return data.Backup(i.Coder(txDescriptor))
+}
+
 // RestoreCheckRetry restore transaction and check if retry limit exceed
 func (i *Manager) RestoreCheckRetry(backup data.Raw, retryTaskError *RetryTaskError) (Transaction, error) {
 	tx, e := i.Restore(backup)
@@ -95,67 +98,59 @@ func (i *Manager) RestoreCheckRetry(backup data.Raw, retryTaskError *RetryTaskEr
 
 // Restore transaction from backup
 func (i *Manager) Restore(backup data.Raw) (Transaction, error) {
-	descriptor, e := i.txManager.Read(bytes.NewReader(backup))
-	if e != nil {
-		return nil, fmt.Errorf(`restore transaction descriptor error: %w`, e)
+	var descriptor data.Descriptor
+	if e := data.Restore(i.Coder(&descriptor), backup); e != nil {
+		return nil, e
 	}
 
-	return data.DescriptorValue[Transaction](descriptor)
+	return data.DescriptorValue[Transaction](&descriptor)
 }
 
-// Write transaction to io.Writer
-func (i *Manager) Write(w io.Writer, tx Transaction) error {
-	// Create new data descriptor with latest transaction manager version
-	descriptor, e := i.newDescriptor(tx)
-	if e != nil {
-		return e
-	}
-
-	return i.txManager.Write(w, descriptor)
-}
-
-func (i *Manager) newDescriptor(tx Transaction) (*data.Descriptor, error) {
-	descriptor, e := i.txManager.New(kind, withClone(tx))
-	if e != nil {
-		return nil, fmt.Errorf(`create transaction descriptor error: %w`, e)
-	}
-
-	return descriptor, nil
-}
-
-// Read transaction from io.Reader
-func (i *Manager) Read(r io.Reader) (Transaction, error) {
-	descriptor, e := i.txManager.Read(r)
-	if e != nil {
-		return nil, fmt.Errorf(`read transaction descriptor error: %w`, e)
-	}
-
-	return data.DescriptorValue[Transaction](descriptor)
+// Coder return implementation for specified transaction data Descriptor
+func (i *Manager) Coder(descriptor *data.Descriptor) data.Serializable {
+	return i.txManager.Coder(descriptor)
 }
 
 // New return new transaction
 func (i *Manager) New(setup ...data.Setup) Transaction {
-	descriptor, e := i.txManager.New(kind, setup...)
-	if e != nil {
-		panic(fmt.Errorf(`create transaction descriptor error: %w`, e))
-	}
+	descriptor := i.NewTxDescriptor(setup...)
 
-	var tx Transaction
-	if tx, e = data.DescriptorValue[Transaction](descriptor); e != nil {
+	tx, e := data.DescriptorValue[Transaction](descriptor)
+	if e != nil {
 		panic(fmt.Errorf(`unexpected transaction descriptor error: %w`, e))
 	}
 
 	return tx
 }
 
-// WriteTask task to io.Writer
-func (i *Manager) WriteTask(w io.Writer, taskDescriptor *data.Descriptor) error {
-	return i.taskManager.Write(w, taskDescriptor)
+// NewTxDescriptor return new transaction descriptor
+func (i *Manager) NewTxDescriptor(setup ...data.Setup) *data.Descriptor {
+	descriptor, e := i.txManager.New(kind, setup...)
+	if e != nil {
+		panic(fmt.Errorf(`create transaction descriptor error: %w`, e))
+	}
+
+	return descriptor
 }
 
-// ReadTask return Task from io.Reader
-func (i *Manager) ReadTask(r io.Reader) (*data.Descriptor, error) {
-	return i.taskManager.Read(r)
+// EncodeTask perform task encoding
+func (i *Manager) EncodeTask(taskDescriptor *data.Descriptor) (data.Raw, error) {
+	return data.Backup(i.TaskCoder(taskDescriptor))
+}
+
+// RestoreTask task from backup
+func (i *Manager) RestoreTask(backup data.Raw) (Task, error) {
+	var descriptor data.Descriptor
+	if e := data.Restore(i.TaskCoder(&descriptor), backup); e != nil {
+		return nil, e
+	}
+
+	return data.DescriptorValue[Task](&descriptor)
+}
+
+// TaskCoder return implementation for specified task data Descriptor
+func (i *Manager) TaskCoder(descriptor *data.Descriptor) data.Serializable {
+	return i.taskManager.Coder(descriptor)
 }
 
 // NewTask return new task container

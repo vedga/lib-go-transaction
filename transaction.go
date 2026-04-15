@@ -1,11 +1,9 @@
 package transaction
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"io"
 
 	"github.com/vedga/lib-go-transaction/data"
 	"github.com/vedga/lib-go-transaction/deque"
@@ -112,7 +110,7 @@ func (i *implementation) nextTask() Task {
 	if encoded, present := q.PopFront(); present {
 		// Not all tasks complete
 		// Note: task removed from current transaction at this point
-		if task, e := i.readTask(bytes.NewBuffer(encoded)); e == nil && task != nil {
+		if task, e := i.manager.RestoreTask(encoded); e == nil && task != nil {
 			// Task supported by this implementation
 			return task
 		}
@@ -157,7 +155,7 @@ func (i *implementation) AddRollbackTask(kind string, setup ...data.Setup) error
 
 // QueueTask task for execution
 func (i *implementation) QueueTask(taskDescriptor *data.Descriptor) error {
-	encodedTask, e := i.encodeTask(taskDescriptor)
+	encodedTask, e := i.manager.EncodeTask(taskDescriptor)
 	if e != nil {
 		return e
 	}
@@ -170,7 +168,7 @@ func (i *implementation) QueueTask(taskDescriptor *data.Descriptor) error {
 
 // QueueRollbackTask for possible rollback
 func (i *implementation) QueueRollbackTask(taskDescriptor *data.Descriptor) error {
-	encodedTask, e := i.encodeTask(taskDescriptor)
+	encodedTask, e := i.manager.EncodeTask(taskDescriptor)
 	if e != nil {
 		return e
 	}
@@ -188,12 +186,7 @@ func (i *implementation) NewTask(kind string, setup ...data.Setup) (*data.Descri
 
 // Backup transaction
 func (i *implementation) Backup() (data.Raw, error) {
-	b := new(bytes.Buffer)
-	if e := i.manager.Write(b, i); e != nil {
-		return nil, fmt.Errorf(`backup transaction error: %w`, e)
-	}
-
-	return b.Bytes(), nil
+	return i.manager.Encode(i.manager.NewTxDescriptor(withClone(i)))
 }
 
 // NextAttempt check if next retry attempt is possible
@@ -208,27 +201,4 @@ func (i *implementation) NextAttempt(maxRetries uint) error {
 
 	// Can retry transaction
 	return nil
-}
-
-func (i *implementation) encodeTask(taskDescriptor *data.Descriptor) (data.Raw, error) {
-	b := new(bytes.Buffer)
-
-	if e := i.writeTask(b, taskDescriptor); e != nil {
-		return nil, fmt.Errorf(`encode task error: %w`, e)
-	}
-
-	return b.Bytes(), nil
-}
-
-func (i *implementation) writeTask(w io.Writer, taskDescriptor *data.Descriptor) error {
-	return i.manager.WriteTask(w, taskDescriptor)
-}
-
-func (i *implementation) readTask(r io.Reader) (Task, error) {
-	taskDescriptor, e := i.manager.ReadTask(r)
-	if e != nil {
-		return nil, e
-	}
-
-	return data.DescriptorValue[Task](taskDescriptor)
 }

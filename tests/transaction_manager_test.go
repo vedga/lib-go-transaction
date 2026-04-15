@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"bytes"
 	"errors"
 	"testing"
 
@@ -74,14 +73,13 @@ func TestManager_Transaction(t *testing.T) {
 
 			tt.args.setup(tx)
 
-			b := &bytes.Buffer{}
-			e := i.Write(b, tx)
+			backup, e := tx.Backup()
 			assert.Condition(t, func() bool {
 				return errors.Is(e, tt.writeError)
 			})
 
 			var got transaction.Transaction
-			got, e = i.Read(b)
+			got, e = i.Restore(backup)
 			assert.Condition(t, func() bool {
 				return errors.Is(e, tt.readError)
 			})
@@ -89,7 +87,6 @@ func TestManager_Transaction(t *testing.T) {
 			assert.Equal(t, tx, got)
 
 			// Backup transaction
-			var backup data.Raw
 			backup, e = got.Backup()
 			assert.NoError(t, e)
 
@@ -100,7 +97,7 @@ func TestManager_Transaction(t *testing.T) {
 			assert.NotEqual(t, tx, got)
 
 			// Restore transaction
-			got, e = i.Read(bytes.NewReader(backup))
+			got, e = i.Restore(backup)
 			assert.NoError(t, e)
 
 			assert.Equal(t, tx, got)
