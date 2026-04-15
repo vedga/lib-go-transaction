@@ -1,19 +1,12 @@
 package data
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
 )
 
 type (
-	// Serializable interface allow object to save and load by readers
-	Serializable interface {
-		Write(w io.Writer) error
-		Read(r io.Reader) error
-	}
-
 	// Producer function for serializable objects
 	Producer func(setup ...Setup) (*Descriptor, error)
 
@@ -87,94 +80,49 @@ func WithInnerCoder(coder Coder) Option {
 
 // Write data to io.Writer
 func (i *Manager) Write(w io.Writer, descriptor *Descriptor) error {
-	c, e := i.NewContainer(descriptor)
-	if e != nil {
-		return fmt.Errorf(`data exchange container build error: %w`, e)
+	c := &container{
+		Kind: descriptor.kind,
+	}
+
+	var e error
+	if c.Payload, e = Backup(i.innerCoder(descriptor.value)); e != nil {
+		return fmt.Errorf(`encode container payload error: %w`, e)
 	}
 
 	// Encode container
-	return i.outerCoder(c).Write(w)
-}
-
-// Backup data descriptor
-func (i *Manager) Backup(descriptor *Descriptor) (Raw, error) {
-	c, e := i.NewContainer(descriptor)
-	if e != nil {
-		return nil, fmt.Errorf(`backup container build error: %w`, e)
+	if e = i.outerCoder(c).Write(w); e != nil {
+		return fmt.Errorf(`encode container error: %w`, e)
 	}
 
-	// Backup data
-	return c.Backup()
-}
-
-// Restore from backup
-func (i *Manager) Restore(raw Raw) (*Descriptor, error) {
-	c, e := RestoreContainer(raw)
-	if e != nil {
-		return nil, fmt.Errorf(`backup container restore error: %w`, e)
-	}
-
-	return i.DescriptorFromContainer(c)
-}
-
-// NewContainer return data exchange container
-func (i *Manager) NewContainer(descriptor *Descriptor) (*Container, error) {
-	kind := descriptor.kind
-
-	// May be removing this check for improve performance?
-	if _, e := i.New(kind); e != nil {
-		return nil, e
-	}
-
-	b := &bytes.Buffer{}
-	if e := i.innerCoder(descriptor.value).Write(b); e != nil {
-		return nil, fmt.Errorf(`encode payload error: %w`, e)
-	}
-
-	// Return data container
-	return &Container{
-		Kind:    kind,
-		Payload: b.Bytes(),
-	}, nil
+	return nil
 }
 
 // Read data from io.Reader
 func (i *Manager) Read(r io.Reader) (*Descriptor, error) {
-	c := new(Container)
+	c := new(container)
 
 	if e := i.outerCoder(c).Read(r); e != nil {
-		return nil, fmt.Errorf(`read container error: %w`, e)
+		return nil, fmt.Errorf(`decode container error: %w`, e)
 	}
 
-	return i.DescriptorFromContainer(c)
-}
-
-// DescriptorFromContainer return data descriptor from container
-func (i *Manager) DescriptorFromContainer(c *Container) (*Descriptor, error) {
-	// When read data options not used
-	o, e := i.New(c.Kind)
+	// Note: Setup not applied if descriptor restored from io.Reader
+	descriptor, e := i.New(c.Kind)
 	if e != nil {
-		return nil, fmt.Errorf(`data can't be read: %w`, e)
+		return nil, e
 	}
 
-	if e = i.innerCoder(o.value).Read(c.Reader()); e != nil {
-		return nil, fmt.Errorf(`decode payload error: %w`, e)
+	if e = Restore(i.innerCoder(descriptor.value), c.Payload); e != nil {
+		return nil, fmt.Errorf(`decode container payload error: %w`, e)
 	}
 
-	return o, nil
+	return descriptor, nil
 }
 
-// New return data descriptor
+// New return data descriptor by kind. For data entity applied passed optional setup.
 func (i *Manager) New(kind string, setup ...Setup) (*Descriptor, error) {
-	producer := i.getProducer(kind)
-	if producer == nil {
-		return nil, ErrNotSupported
+	if producer, found := i.producersMap[kind]; found {
+		return producer(setup...)
 	}
 
-	return producer(setup...)
-}
-
-// getProducer return specified producer
-func (i *Manager) getProducer(kind string) Producer {
-	return i.producersMap[kind]
+	return nil, ErrNotSupported
 }

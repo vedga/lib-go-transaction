@@ -1,6 +1,7 @@
 package transaction
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 
@@ -76,18 +77,6 @@ func WithTxIDProducer(producer func() string) Option {
 	}
 }
 
-// Backup transaction
-func (i *Manager) Backup(tx Transaction) (data.Raw, error) {
-	// Create new data descriptor with latest transaction manager version
-	descriptor, e := i.newDescriptor(tx)
-	if e != nil {
-		return nil, e
-	}
-
-	// Create descriptor backup
-	return i.txManager.Backup(descriptor)
-}
-
 // RestoreCheckRetry restore transaction and check if retry limit exceed
 func (i *Manager) RestoreCheckRetry(backup data.Raw, retryTaskError *RetryTaskError) (Transaction, error) {
 	tx, e := i.Restore(backup)
@@ -106,7 +95,7 @@ func (i *Manager) RestoreCheckRetry(backup data.Raw, retryTaskError *RetryTaskEr
 
 // Restore transaction from backup
 func (i *Manager) Restore(backup data.Raw) (Transaction, error) {
-	descriptor, e := i.txManager.Restore(backup)
+	descriptor, e := i.txManager.Read(bytes.NewReader(backup))
 	if e != nil {
 		return nil, fmt.Errorf(`restore transaction descriptor error: %w`, e)
 	}
@@ -145,8 +134,8 @@ func (i *Manager) Read(r io.Reader) (Transaction, error) {
 }
 
 // New return new transaction
-func (i *Manager) New() Transaction {
-	descriptor, e := i.txManager.New(kind)
+func (i *Manager) New(setup ...data.Setup) Transaction {
+	descriptor, e := i.txManager.New(kind, setup...)
 	if e != nil {
 		panic(fmt.Errorf(`create transaction descriptor error: %w`, e))
 	}
@@ -159,22 +148,17 @@ func (i *Manager) New() Transaction {
 	return tx
 }
 
-// NewTask return new task container
-func (i *Manager) NewTask(kind string, setup ...data.Setup) (*data.Container, error) {
-	descriptor, e := i.taskManager.New(kind, setup...)
-	if e != nil {
-		return nil, fmt.Errorf(`create task descriptor error: %w`, e)
-	}
-
-	return i.taskManager.NewContainer(descriptor)
+// WriteTask task to io.Writer
+func (i *Manager) WriteTask(w io.Writer, taskDescriptor *data.Descriptor) error {
+	return i.taskManager.Write(w, taskDescriptor)
 }
 
-// GetTask return task from container
-func (i *Manager) GetTask(taskContainer *data.Container) (Task, error) {
-	taskDescriptor, e := i.taskManager.DescriptorFromContainer(taskContainer)
-	if e != nil {
-		return nil, fmt.Errorf(`invalid task container: %w`, e)
-	}
+// ReadTask return Task from io.Reader
+func (i *Manager) ReadTask(r io.Reader) (*data.Descriptor, error) {
+	return i.taskManager.Read(r)
+}
 
-	return data.DescriptorValue[Task](taskDescriptor)
+// NewTask return new task container
+func (i *Manager) NewTask(kind string, setup ...data.Setup) (*data.Descriptor, error) {
+	return i.taskManager.New(kind, setup...)
 }

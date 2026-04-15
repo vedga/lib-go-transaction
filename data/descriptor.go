@@ -1,8 +1,21 @@
 package data
 
-import "errors"
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+)
 
 type (
+	// Raw data format
+	Raw = []byte
+
+	// container representation
+	container struct {
+		Kind    string `json:"kind"`
+		Payload Raw    `json:"payload"`
+	}
+
 	// Descriptor implementation
 	Descriptor struct {
 		kind  string
@@ -59,4 +72,29 @@ func Value[T any](v any) (T, error) {
 
 	var none T
 	return none, ErrInvalidSetup
+}
+
+// MarshalJSON implementation of json.Marshaler interface
+func (i *Descriptor) MarshalJSON() ([]byte, error) {
+	c := container{
+		Kind: i.kind,
+	}
+
+	var e error
+	if c.Payload, e = Backup(jsonCoder(i.value)); e != nil {
+		return nil, fmt.Errorf(`payload encoding error: %w`, e)
+	}
+
+	return json.Marshal(c)
+}
+
+// UnmarshalJSON implementation json.Unmarshaler interface
+func (i *Descriptor) UnmarshalJSON(raw []byte) error {
+	c := new(container)
+
+	if e := json.Unmarshal(raw, c); e != nil {
+		return fmt.Errorf(`payload decoding error: %w`, e)
+	}
+
+	return Restore(jsonCoder(i.value), c.Payload)
 }

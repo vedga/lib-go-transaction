@@ -1,9 +1,11 @@
 package transaction
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/vedga/lib-go-transaction/data"
 	"github.com/vedga/lib-go-transaction/deque"
@@ -16,14 +18,15 @@ type (
 		Task
 		AddTask(kind string, setup ...data.Setup) error
 		AddRollbackTask(kind string, setup ...data.Setup) error
-		QueueTask(container *data.Container)
-		QueueRollbackTask(container *data.Container)
+		QueueTask(container *data.Descriptor) error
+		QueueRollbackTask(container *data.Descriptor) error
 		SetRollback() error
-		NewTask(kind string, setup ...data.Setup) (*data.Container, error)
+		NewTask(kind string, setup ...data.Setup) (*data.Descriptor, error)
 		Backup() (data.Raw, error)
 		NextAttempt(maxRetries uint) error
 	}
 
+	// implementation of the transaction task
 	implementation struct {
 		manager *Manager
 		// ID of the transaction
@@ -33,17 +36,17 @@ type (
 		// Attempt of task execution
 		Attempt uint
 		// PendingTasks contain tasks sequence for execute transaction
-		PendingTasks *deque.Deque[*data.Container]
+		PendingTasks *deque.Deque[data.Raw]
 		// RollbackStack contain transaction rollback sequence
-		RollbackStack *deque.Deque[*data.Container]
+		RollbackStack *deque.Deque[data.Raw]
 	}
 )
 
 func withConstructor(ID string) data.Setup {
 	return data.NewSetup[implementation](func(o *implementation) error {
 		o.ID = ID
-		o.PendingTasks = deque.New[*data.Container](0)
-		o.RollbackStack = deque.New[*data.Container](0)
+		o.PendingTasks = deque.New[data.Raw](0)
+		o.RollbackStack = deque.New[data.Raw](0)
 
 		return nil
 	})
@@ -99,17 +102,17 @@ func (i *implementation) Run(ctx context.Context, tx Transaction) error {
 }
 
 func (i *implementation) nextTask() Task {
-	var q *deque.Deque[*data.Container]
+	var q *deque.Deque[data.Raw]
 	if i.RollbackIndicator {
 		q = i.RollbackStack
 	} else {
 		q = i.PendingTasks
 	}
 
-	if taskContainer, present := q.PopFront(); present {
+	if encoded, present := q.PopFront(); present {
 		// Not all tasks complete
 		// Note: task removed from current transaction at this point
-		if task, e := i.manager.GetTask(taskContainer); e == nil && task != nil {
+		if task, e := i.readTask(bytes.NewBuffer(encoded)); e == nil && task != nil {
 			// Task supported by this implementation
 			return task
 		}
@@ -138,9 +141,7 @@ func (i *implementation) AddTask(kind string, setup ...data.Setup) error {
 	}
 
 	// Queue task for execution
-	i.QueueTask(container)
-
-	return nil
+	return i.QueueTask(container)
 }
 
 // AddRollbackTask add rollback task to the transaction
@@ -151,31 +152,48 @@ func (i *implementation) AddRollbackTask(kind string, setup ...data.Setup) error
 	}
 
 	// Queue task for execution
-	i.QueueRollbackTask(container)
+	return i.QueueRollbackTask(container)
+}
+
+// QueueTask task for execution
+func (i *implementation) QueueTask(taskDescriptor *data.Descriptor) error {
+	encodedTask, e := i.encodeTask(taskDescriptor)
+	if e != nil {
+		return e
+	}
+
+	// Normal task order
+	i.PendingTasks.PushBack(encodedTask)
 
 	return nil
 }
 
-// QueueTask task for execution
-func (i *implementation) QueueTask(container *data.Container) {
-	// Normal task order
-	i.PendingTasks.PushBack(container)
-}
-
 // QueueRollbackTask for possible rollback
-func (i *implementation) QueueRollbackTask(container *data.Container) {
+func (i *implementation) QueueRollbackTask(taskDescriptor *data.Descriptor) error {
+	encodedTask, e := i.encodeTask(taskDescriptor)
+	if e != nil {
+		return e
+	}
+
 	// Reverse task order
-	i.RollbackStack.PushFront(container)
+	i.RollbackStack.PushFront(encodedTask)
+
+	return nil
 }
 
 // NewTask return new task context at data exchange format
-func (i *implementation) NewTask(kind string, setup ...data.Setup) (*data.Container, error) {
+func (i *implementation) NewTask(kind string, setup ...data.Setup) (*data.Descriptor, error) {
 	return i.manager.NewTask(kind, setup...)
 }
 
 // Backup transaction
 func (i *implementation) Backup() (data.Raw, error) {
-	return i.manager.Backup(i)
+	b := new(bytes.Buffer)
+	if e := i.manager.Write(b, i); e != nil {
+		return nil, fmt.Errorf(`backup transaction error: %w`, e)
+	}
+
+	return b.Bytes(), nil
 }
 
 // NextAttempt check if next retry attempt is possible
@@ -190,4 +208,27 @@ func (i *implementation) NextAttempt(maxRetries uint) error {
 
 	// Can retry transaction
 	return nil
+}
+
+func (i *implementation) encodeTask(taskDescriptor *data.Descriptor) (data.Raw, error) {
+	b := new(bytes.Buffer)
+
+	if e := i.writeTask(b, taskDescriptor); e != nil {
+		return nil, fmt.Errorf(`encode task error: %w`, e)
+	}
+
+	return b.Bytes(), nil
+}
+
+func (i *implementation) writeTask(w io.Writer, taskDescriptor *data.Descriptor) error {
+	return i.manager.WriteTask(w, taskDescriptor)
+}
+
+func (i *implementation) readTask(r io.Reader) (Task, error) {
+	taskDescriptor, e := i.manager.ReadTask(r)
+	if e != nil {
+		return nil, e
+	}
+
+	return data.DescriptorValue[Task](taskDescriptor)
 }

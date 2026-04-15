@@ -95,14 +95,14 @@ func (mr *MockTransactionMockRecorder) Backup() *gomock.Call {
 }
 
 // NewTask mocks base method.
-func (m *MockTransaction) NewTask(kind string, setup ...data.Setup) (*data.Container, error) {
+func (m *MockTransaction) NewTask(kind string, setup ...data.Setup) (*data.Descriptor, error) {
 	m.ctrl.T.Helper()
 	varargs := []any{kind}
 	for _, a := range setup {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "NewTask", varargs...)
-	ret0, _ := ret[0].(*data.Container)
+	ret0, _ := ret[0].(*data.Descriptor)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -129,9 +129,11 @@ func (mr *MockTransactionMockRecorder) NextAttempt(maxRetries any) *gomock.Call 
 }
 
 // QueueRollbackTask mocks base method.
-func (m *MockTransaction) QueueRollbackTask(container *data.Container) {
+func (m *MockTransaction) QueueRollbackTask(container *data.Descriptor) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "QueueRollbackTask", container)
+	ret := m.ctrl.Call(m, "QueueRollbackTask", container)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // QueueRollbackTask indicates an expected call of QueueRollbackTask.
@@ -141,9 +143,11 @@ func (mr *MockTransactionMockRecorder) QueueRollbackTask(container any) *gomock.
 }
 
 // QueueTask mocks base method.
-func (m *MockTransaction) QueueTask(container *data.Container) {
+func (m *MockTransaction) QueueTask(container *data.Descriptor) error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "QueueTask", container)
+	ret := m.ctrl.Call(m, "QueueTask", container)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // QueueTask indicates an expected call of QueueTask.

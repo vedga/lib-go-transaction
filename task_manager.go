@@ -41,26 +41,6 @@ func NewTaskManager(taskProducers data.Producers, options ...data.Option) *TaskM
 	}
 }
 
-// Backup data descriptor
-func (i *TaskManager) Backup(descriptor *data.Descriptor) (data.Raw, error) {
-	return i.dataManager.Backup(descriptor)
-}
-
-// Restore from backup
-func (i *TaskManager) Restore(raw data.Raw) (*data.Descriptor, error) {
-	o, e := i.dataManager.Restore(raw)
-	if e != nil {
-		return nil, e
-	}
-
-	// Verify type
-	if _, e = data.DescriptorValue[Task](o); e != nil {
-		return nil, fmt.Errorf("restore task error: %w", e)
-	}
-
-	return o, nil
-}
-
 // Write task to io.Writer
 func (i *TaskManager) Write(w io.Writer, descriptor *data.Descriptor) error {
 	return i.dataManager.Write(w, descriptor)
@@ -79,16 +59,6 @@ func (i *TaskManager) Read(r io.Reader) (*data.Descriptor, error) {
 	}
 
 	return o, nil
-}
-
-// NewContainer return task exchange container
-func (i *TaskManager) NewContainer(descriptor *data.Descriptor) (*data.Container, error) {
-	return i.dataManager.NewContainer(descriptor)
-}
-
-// DescriptorFromContainer return data descriptor from container
-func (i *TaskManager) DescriptorFromContainer(c *data.Container) (*data.Descriptor, error) {
-	return i.dataManager.DescriptorFromContainer(c)
 }
 
 // New return new task descriptor

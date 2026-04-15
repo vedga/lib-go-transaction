@@ -100,7 +100,7 @@ func TestManager_Transaction(t *testing.T) {
 			assert.NotEqual(t, tx, got)
 
 			// Restore transaction
-			got, e = i.Restore(backup)
+			got, e = i.Read(bytes.NewReader(backup))
 			assert.NoError(t, e)
 
 			assert.Equal(t, tx, got)
