@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	transaction "github.com/vedga/lib-go-transaction"
-	"github.com/vedga/lib-go-transaction/data"
+	"github.com/vedga/lib-go-transaction/data_old"
 	mock "github.com/vedga/lib-go-transaction/mock"
 )
 
@@ -29,7 +29,7 @@ func TestManager_Transaction(t *testing.T) {
 		}
 
 		setup struct {
-			taskProducers data.Producers
+			taskProducers data_old.Producers
 			options       []transaction.Option
 		}
 		args struct {
@@ -46,12 +46,12 @@ func TestManager_Transaction(t *testing.T) {
 		{
 			name: "Write and read transaction",
 			setup: setup{
-				taskProducers: data.Producers{
-					func(setup ...data.Setup) (*data.Descriptor, error) {
-						return data.NewDescriptor[taskA](kindA, setup...)
+				taskProducers: data_old.Producers{
+					func(setup ...data_old.Setup) (*data_old.Descriptor, error) {
+						return data_old.NewDescriptor[taskA](kindA, setup...)
 					},
-					func(setup ...data.Setup) (*data.Descriptor, error) {
-						return data.NewDescriptor[taskB](kindB, setup...)
+					func(setup ...data_old.Setup) (*data_old.Descriptor, error) {
+						return data_old.NewDescriptor[taskB](kindB, setup...)
 					},
 				},
 			},

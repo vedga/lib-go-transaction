@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	transaction "github.com/vedga/lib-go-transaction"
-	"github.com/vedga/lib-go-transaction/data"
+	"github.com/vedga/lib-go-transaction/data_old"
 	mock "github.com/vedga/lib-go-transaction/mock"
 	"go.uber.org/mock/gomock"
 )
@@ -40,10 +40,10 @@ func TestTransactionExecution(t *testing.T) {
 		kindUnsupported = `unsupported`
 	)
 
-	unsupportedTask, initError := transaction.NewManager(data.Producers{
+	unsupportedTask, initError := transaction.NewManager(data_old.Producers{
 		// taskA
-		func(setup ...data.Setup) (*data.Descriptor, error) {
-			return data.NewDescriptor[taskUnsupported](kindUnsupported, setup...)
+		func(setup ...data_old.Setup) (*data_old.Descriptor, error) {
+			return data_old.NewDescriptor[taskUnsupported](kindUnsupported, setup...)
 		},
 	}).NewTask(kindUnsupported)
 	assert.NoError(t, initError)
@@ -62,14 +62,14 @@ func TestTransactionExecution(t *testing.T) {
 
 					// Создаем менеджер с двумя задачами
 					m := transaction.NewManager(
-						data.Producers{
+						data_old.Producers{
 							// taskA
-							func(setup ...data.Setup) (*data.Descriptor, error) {
-								return data.NewDescriptor[taskA](kindA,
+							func(setup ...data_old.Setup) (*data_old.Descriptor, error) {
+								return data_old.NewDescriptor[taskA](kindA,
 									append(
-										[]data.Setup{
+										[]data_old.Setup{
 											// Имплементация taskA
-											data.NewSetup[taskA](func(o *taskA) error {
+											data_old.NewSetup[taskA](func(o *taskA) error {
 												o.MockTask = ta
 												return nil
 											}),
@@ -78,12 +78,12 @@ func TestTransactionExecution(t *testing.T) {
 									)...)
 							},
 							// taskB
-							func(setup ...data.Setup) (*data.Descriptor, error) {
-								return data.NewDescriptor[taskB](kindB,
+							func(setup ...data_old.Setup) (*data_old.Descriptor, error) {
+								return data_old.NewDescriptor[taskB](kindB,
 									append(
-										[]data.Setup{
+										[]data_old.Setup{
 											// Имплементация taskB
-											data.NewSetup[taskB](func(o *taskB) error {
+											data_old.NewSetup[taskB](func(o *taskB) error {
 												o.MockTask = tb
 												return nil
 											}),
@@ -145,14 +145,14 @@ func TestTransactionExecution(t *testing.T) {
 
 					// Создаем менеджер с двумя задачами
 					m := transaction.NewManager(
-						data.Producers{
+						data_old.Producers{
 							// taskA
-							func(setup ...data.Setup) (*data.Descriptor, error) {
-								return data.NewDescriptor[taskA](kindA,
+							func(setup ...data_old.Setup) (*data_old.Descriptor, error) {
+								return data_old.NewDescriptor[taskA](kindA,
 									append(
-										[]data.Setup{
+										[]data_old.Setup{
 											// Имплементация taskA
-											data.NewSetup[taskA](func(o *taskA) error {
+											data_old.NewSetup[taskA](func(o *taskA) error {
 												o.MockTask = ta
 												return nil
 											}),
@@ -161,12 +161,12 @@ func TestTransactionExecution(t *testing.T) {
 									)...)
 							},
 							// taskB
-							func(setup ...data.Setup) (*data.Descriptor, error) {
-								return data.NewDescriptor[taskB](kindB,
+							func(setup ...data_old.Setup) (*data_old.Descriptor, error) {
+								return data_old.NewDescriptor[taskB](kindB,
 									append(
-										[]data.Setup{
+										[]data_old.Setup{
 											// Имплементация taskB
-											data.NewSetup[taskB](func(o *taskB) error {
+											data_old.NewSetup[taskB](func(o *taskB) error {
 												o.MockTask = tb
 												return nil
 											}),
@@ -201,14 +201,14 @@ func TestTransactionExecution(t *testing.T) {
 
 					// Создаем менеджер с двумя задачами
 					m := transaction.NewManager(
-						data.Producers{
+						data_old.Producers{
 							// taskA
-							func(setup ...data.Setup) (*data.Descriptor, error) {
-								return data.NewDescriptor[taskA](kindA,
+							func(setup ...data_old.Setup) (*data_old.Descriptor, error) {
+								return data_old.NewDescriptor[taskA](kindA,
 									append(
-										[]data.Setup{
+										[]data_old.Setup{
 											// Имплементация taskA
-											data.NewSetup[taskA](func(o *taskA) error {
+											data_old.NewSetup[taskA](func(o *taskA) error {
 												o.MockTask = ta
 												return nil
 											}),
@@ -217,12 +217,12 @@ func TestTransactionExecution(t *testing.T) {
 									)...)
 							},
 							// taskB
-							func(setup ...data.Setup) (*data.Descriptor, error) {
-								return data.NewDescriptor[taskB](kindB,
+							func(setup ...data_old.Setup) (*data_old.Descriptor, error) {
+								return data_old.NewDescriptor[taskB](kindB,
 									append(
-										[]data.Setup{
+										[]data_old.Setup{
 											// Имплементация taskB
-											data.NewSetup[taskB](func(o *taskB) error {
+											data_old.NewSetup[taskB](func(o *taskB) error {
 												o.MockTask = tb
 												return nil
 											}),

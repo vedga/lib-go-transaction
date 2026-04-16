@@ -1,4 +1,4 @@
-package data
+package data_old
 
 import (
 	"errors"
@@ -32,18 +32,18 @@ var (
 	ErrNotSupported = errors.New("container is not supported")
 )
 
-// NewManager return data manager implementation
+// NewManager return data_old manager implementation
 func NewManager(producers Producers, options ...Option) *Manager {
 	producersMap := make(map[string]Producer, len(producers))
 	for _, descriptorProducer := range producers {
 		descriptor, e := descriptorProducer()
 		if e != nil {
-			panic(`Invalid data producer: ` + e.Error())
+			panic(`Invalid data_old producer: ` + e.Error())
 		}
 
 		kind := descriptor.kind
 		if _, dup := producersMap[kind]; dup {
-			panic(`data ` + kind + ` is duplicated.`)
+			panic(`data_old ` + kind + ` is duplicated.`)
 		}
 
 		producersMap[kind] = descriptorProducer
@@ -78,7 +78,7 @@ func WithInnerCoder(coder Coder) Option {
 	}
 }
 
-// Coder return implementation for specified data Descriptor
+// Coder return implementation for specified data_old Descriptor
 func (i *Manager) Coder(descriptor *Descriptor) Serializable {
 	return newDescriptorCodec(
 		func(w io.Writer) error {
@@ -123,7 +123,7 @@ func (i *Manager) Coder(descriptor *Descriptor) Serializable {
 	)
 }
 
-// New return data descriptor by kind. For data entity applied passed optional setup.
+// New return data_old descriptor by kind. For data_old entity applied passed optional setup.
 func (i *Manager) New(kind string, setup ...Setup) (*Descriptor, error) {
 	if producer, found := i.producersMap[kind]; found {
 		return producer(setup...)

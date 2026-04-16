@@ -1,4 +1,4 @@
-package data
+package data_old
 
 import (
 	"bytes"
@@ -13,7 +13,7 @@ type (
 	}
 )
 
-// Backup Serializable object as Raw data type
+// Backup Serializable object as Raw data_old type
 func Backup(o Serializable) (Raw, error) {
 	b := new(bytes.Buffer)
 	if e := o.Write(b); e != nil {
@@ -23,7 +23,7 @@ func Backup(o Serializable) (Raw, error) {
 	return b.Bytes(), nil
 }
 
-// Restore Serializable object from Raw data type
+// Restore Serializable object from Raw data_old type
 func Restore(o Serializable, s Raw) error {
 	return o.Read(bytes.NewBuffer(s))
 }

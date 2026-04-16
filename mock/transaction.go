@@ -14,7 +14,7 @@ import (
 	reflect "reflect"
 
 	transaction "github.com/vedga/lib-go-transaction"
-	data "github.com/vedga/lib-go-transaction/data"
+	data "github.com/vedga/lib-go-transaction/data_old"
 	gomock "go.uber.org/mock/gomock"
 )
 

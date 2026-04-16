@@ -1,4 +1,4 @@
-package data
+package data_old
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 )
 
 type (
-	// Raw data format
+	// Raw data_old format
 	Raw = []byte
 
 	// container structure used only as encoding/decoding template for Descriptor entity
@@ -31,7 +31,7 @@ var (
 	ErrInvalidSetup = errors.New("invalid setup")
 )
 
-// NewDescriptor return new data descriptor
+// NewDescriptor return new data_old descriptor
 func NewDescriptor[T any](kind string, setup ...Setup) (*Descriptor, error) {
 	v := new(T)
 
@@ -59,7 +59,7 @@ func NewSetup[T any](setup func(*T) error) Setup {
 	}
 }
 
-// DescriptorValue return specified data type from data descriptor
+// DescriptorValue return specified data_old type from data_old descriptor
 func DescriptorValue[T any](descriptor *Descriptor) (T, error) {
 	return Value[T](descriptor.value)
 }
