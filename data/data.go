@@ -15,8 +15,8 @@ type (
 )
 
 var (
-	// ErrInvalidValue indicate invalid value transformation
-	ErrInvalidValue = errors.New("invalid value")
+	// ErrInvalidTransformation indicate invalid value transformation
+	ErrInvalidTransformation = errors.New("invalid data transformation")
 )
 
 // NewProducer return new producer of entity type T
@@ -43,7 +43,7 @@ func Ref[T any](v Serializable) (*T, error) {
 		return i.o, nil
 	}
 
-	return nil, ErrInvalidValue
+	return nil, ErrInvalidTransformation
 }
 
 // Kind implementation Serializable interface
@@ -52,6 +52,7 @@ func (i *implementation[T]) Kind() string {
 }
 
 // Write implementation Serializable interface
+// This method write only value content from the current place, kind not used.
 func (i *implementation[T]) Write(w io.Writer) error {
 	encoder := json.NewEncoder(w)
 
@@ -64,6 +65,7 @@ func (i *implementation[T]) Write(w io.Writer) error {
 }
 
 // Read implementation Serializable interface
+// This method read only value content to the current place, kind value stay unchanged.
 func (i *implementation[T]) Read(r io.Reader) error {
 	decoder := json.NewDecoder(r)
 
