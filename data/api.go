@@ -7,9 +7,6 @@ import (
 //go:generate mockgen -destination=mock/$GOFILE -source $GOFILE
 
 type (
-	// Raw data format
-	Raw = []byte
-
 	// Codec interface allow save objects of any or limited types to the io.Writer
 	// and then later restore it from io.Reader
 	Codec interface {
