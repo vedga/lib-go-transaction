@@ -50,8 +50,12 @@ func TestNewManager(t *testing.T) {
 					WithProducer(NewProducer[typeB](kindB)),
 					WithProducer(NewProducer[typeC](kindC)),
 				},
+				setup: []Setup{},
 				content: func() Serializable {
-					o, _ := NewProducer[typeB](kindB)()
+					o, _ := NewProducer[typeB](kindB)(NewSetup(func(o *typeB) error {
+						o.FieldInt = 42
+						return nil
+					}))
 					v, _ := Ref[typeB](o)
 					v.FieldInt = -1234
 					return o
