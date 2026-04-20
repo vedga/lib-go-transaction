@@ -1,9 +1,7 @@
 package data
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 )
 
@@ -53,27 +51,12 @@ func (i *implementation[T]) Kind() string {
 
 // Write implementation Serializable interface
 // This method write only value content from the current place, kind not used.
-func (i *implementation[T]) Write(w io.Writer) error {
-	encoder := json.NewEncoder(w)
-
-	if e := encoder.Encode(i.o); e != nil {
-		return fmt.Errorf(`json encode error: %w`, e)
-	}
-
-	return nil
-
+func (i *implementation[T]) Write(w io.Writer, codec Codec) error {
+	return codec.Write(w, i.o)
 }
 
 // Read implementation Serializable interface
 // This method read only value content to the current place, kind value stay unchanged.
-func (i *implementation[T]) Read(r io.Reader) error {
-	decoder := json.NewDecoder(r)
-
-	decoder.DisallowUnknownFields()
-
-	if e := decoder.Decode(i.o); e != nil {
-		return fmt.Errorf(`json decode error: %w`, e)
-	}
-
-	return nil
+func (i *implementation[T]) Read(r io.Reader, codec Codec) error {
+	return codec.Read(r, i.o)
 }

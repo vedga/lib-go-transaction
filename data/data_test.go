@@ -14,6 +14,7 @@ func TestDataReadWrite(t *testing.T) {
 	type (
 		args struct {
 			producer Producer
+			codec    Codec
 			setup    []Setup
 		}
 
@@ -47,6 +48,7 @@ func TestDataReadWrite(t *testing.T) {
 			name: "Int value",
 			args: args{
 				producer: NewProducer[int](kindInt),
+				codec:    NewCodecJSON(),
 				setup: []Setup{
 					func(o any) error {
 						v := o.(*int)
@@ -83,6 +85,7 @@ func TestDataReadWrite(t *testing.T) {
 			name: "Structure with exportable and non exportable fields with setup and update",
 			args: args{
 				producer: NewProducer[typeC](kindC),
+				codec:    NewCodecJSON(),
 				setup: []Setup{
 					func(o any) error {
 						v := o.(*typeC)
@@ -122,6 +125,7 @@ func TestDataReadWrite(t *testing.T) {
 			name: "Structure with exportable fields with setup",
 			args: args{
 				producer: NewProducer[typeB](kindB),
+				codec:    NewCodecJSON(),
 				setup: []Setup{
 					func(o any) error {
 						v := o.(*typeB)
@@ -155,6 +159,7 @@ func TestDataReadWrite(t *testing.T) {
 			name: "Empty structure w/o setup",
 			args: args{
 				producer: NewProducer[typeA](kindA),
+				codec:    NewCodecJSON(),
 			},
 			wantErr:  nil,
 			wantKind: kindA,
@@ -195,7 +200,7 @@ func TestDataReadWrite(t *testing.T) {
 
 			// Check write operation
 			buf := new(bytes.Buffer)
-			e = i.Write(buf)
+			e = i.Write(buf, tt.args.codec)
 			require.NoError(t, e)
 
 			// Produce entity w/o setup
@@ -203,7 +208,7 @@ func TestDataReadWrite(t *testing.T) {
 			require.NoError(t, e)
 
 			// Check read operation
-			e = i.Read(buf)
+			e = i.Read(buf, tt.args.codec)
 			require.NoError(t, e)
 
 			expected := tt.expected()
