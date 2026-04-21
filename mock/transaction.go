@@ -79,6 +79,21 @@ func (mr *MockTransactionMockRecorder) AddTask(kind any, setup ...any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTask", reflect.TypeOf((*MockTransaction)(nil).AddTask), varargs...)
 }
 
+// Encode mocks base method.
+func (m *MockTransaction) Encode() (data.Bytes, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Encode")
+	ret0, _ := ret[0].(data.Bytes)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Encode indicates an expected call of Encode.
+func (mr *MockTransactionMockRecorder) Encode() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Encode", reflect.TypeOf((*MockTransaction)(nil).Encode))
+}
+
 // NewTask mocks base method.
 func (m *MockTransaction) NewTask(kind string, setup ...data.Setup) (transaction.Task, error) {
 	m.ctrl.T.Helper()

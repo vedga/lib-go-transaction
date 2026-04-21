@@ -14,6 +14,7 @@ type (
 	// Transaction interface declaration
 	Transaction interface {
 		Task
+		Encode() (data.Bytes, error)
 		AddTask(kind string, setup ...data.Setup) error
 		AddRollbackTask(kind string, setup ...data.Setup) error
 		QueueTask(kind string, task Task) error
@@ -57,24 +58,6 @@ func withTransactionManager(manager *Manager) data.Setup {
 	})
 }
 
-/*
-func withClone(tx Transaction) data.Setup {
-	return data.NewSetup[implementation](func(o *implementation) error {
-		if i, theSame := tx.(*implementation); theSame {
-			// Clone fields
-			o.ID = i.ID
-			o.RollbackIndicator = i.RollbackIndicator
-			o.PendingTasks = deque.Clone(i.PendingTasks)
-			o.RollbackStack = deque.Clone(i.RollbackStack)
-
-			return nil
-		}
-
-		return errors.New("only same transaction type supported yet")
-	})
-}
-*/
-
 // Run transaction
 // Return values:
 // nil - no errors (task processed, current task not supported, transaction complete or being complete)
@@ -97,6 +80,11 @@ func (i *implementation) Run(ctx context.Context, tx Transaction) error {
 	}
 
 	return nil
+}
+
+// Encode transaction context to the byte sequence
+func (i *implementation) Encode() (data.Bytes, error) {
+	return i.manager.Encode(txKind, i)
 }
 
 func (i *implementation) nextTask() (string, Task) {

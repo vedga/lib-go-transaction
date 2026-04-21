@@ -40,7 +40,7 @@ func NewManager(options ...Option) *Manager {
 	// Task manager for transaction itself
 	i.txManager = NewTaskManager(
 		WithTaskProducer(txKind, func(setup ...data.Setup) (Task, error) {
-			producer := data.NewProducer[*implementation]()
+			producer := data.NewProducer[implementation]()
 
 			tx, e := producer(
 				append([]data.Setup{
@@ -55,18 +55,6 @@ func NewManager(options ...Option) *Manager {
 			return data.As[Task](tx)
 		}),
 	)
-	/*
-			data_old.Producers{
-			func(setup ...data_old.Setup) (*data_old.Descriptor, error) {
-				// Set manager before execute all other setup commands
-				return data_old.NewDescriptor[implementation](kind,
-					append([]data_old.Setup{
-						withConstructor(i.newID()),
-						withTransactionManager(i),
-					}, setup...)...)
-			},
-		})
-	*/
 
 	i.taskManager = NewTaskManager(i.taskOptions...)
 
@@ -102,18 +90,6 @@ func (i *Manager) RestoreCheckRetry(backup data.Bytes, retryTaskError *RetryTask
 
 	return tx, nil
 }
-
-/*
-// Restore transaction from backup
-func (i *Manager) Restore(backup data_old.Raw) (Transaction, error) {
-	var descriptor data_old.Descriptor
-	if e := data_old.Restore(i.Coder(&descriptor), backup); e != nil {
-		return nil, e
-	}
-
-	return data_old.DescriptorValue[Transaction](&descriptor)
-}
-*/
 
 // Encode transaction context to the byte sequence
 func (i *Manager) Encode(kind string, tx Transaction) (data.Bytes, error) {

@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	transaction "github.com/vedga/lib-go-transaction"
-	"github.com/vedga/lib-go-transaction/data_old"
+	"github.com/vedga/lib-go-transaction/data"
 	mock "github.com/vedga/lib-go-transaction/mock"
 )
 
@@ -28,34 +28,45 @@ func TestManager_Transaction(t *testing.T) {
 			String string
 		}
 
-		setup struct {
-			taskProducers data_old.Producers
-			options       []transaction.Option
-		}
 		args struct {
-			setup func(tx transaction.Transaction)
+			options []transaction.Option
+			setup   func(tx transaction.Transaction)
 		}
 	)
 	tests := []struct {
-		name       string
-		setup      setup
+		name string
+		//		setup      setup
 		args       args
 		writeError error
 		readError  error
 	}{
 		{
 			name: "Write and read transaction",
-			setup: setup{
-				taskProducers: data_old.Producers{
-					func(setup ...data_old.Setup) (*data_old.Descriptor, error) {
-						return data_old.NewDescriptor[taskA](kindA, setup...)
-					},
-					func(setup ...data_old.Setup) (*data_old.Descriptor, error) {
-						return data_old.NewDescriptor[taskB](kindB, setup...)
-					},
-				},
-			},
 			args: args{
+				options: []transaction.Option{
+					// Task A
+					transaction.WithTxTaskProducer(kindA, func(setup ...data.Setup) (transaction.Task, error) {
+						producer := data.NewProducer[taskA]()
+
+						task, e := producer(setup...)
+						if e != nil {
+							return nil, e
+						}
+
+						return data.As[transaction.Task](task)
+					}),
+					// Task B
+					transaction.WithTxTaskProducer(kindB, func(setup ...data.Setup) (transaction.Task, error) {
+						producer := data.NewProducer[taskB]()
+
+						task, e := producer(setup...)
+						if e != nil {
+							return nil, e
+						}
+
+						return data.As[transaction.Task](task)
+					}),
+				},
 				setup: func(tx transaction.Transaction) {
 					_ = tx.AddTask(kindA)
 					_ = tx.AddTask(kindB)
@@ -67,19 +78,19 @@ func TestManager_Transaction(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			i := transaction.NewManager(tt.setup.taskProducers, tt.setup.options...)
+			i := transaction.NewManager(tt.args.options...)
 
 			tx := i.New()
 
 			tt.args.setup(tx)
 
-			backup, e := tx.Backup()
+			backup, e := tx.Encode()
 			assert.Condition(t, func() bool {
 				return errors.Is(e, tt.writeError)
 			})
 
 			var got transaction.Transaction
-			got, e = i.Restore(backup)
+			_, got, e = i.Decode(backup)
 			assert.Condition(t, func() bool {
 				return errors.Is(e, tt.readError)
 			})
@@ -87,7 +98,7 @@ func TestManager_Transaction(t *testing.T) {
 			assert.Equal(t, tx, got)
 
 			// Backup transaction
-			backup, e = got.Backup()
+			backup, e = got.Encode()
 			assert.NoError(t, e)
 
 			// Modify transaction
@@ -97,7 +108,7 @@ func TestManager_Transaction(t *testing.T) {
 			assert.NotEqual(t, tx, got)
 
 			// Restore transaction
-			got, e = i.Restore(backup)
+			_, got, e = i.Decode(backup)
 			assert.NoError(t, e)
 
 			assert.Equal(t, tx, got)
