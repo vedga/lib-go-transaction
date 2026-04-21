@@ -8,7 +8,6 @@ import (
 )
 
 func TestDataReadWrite(t *testing.T) {
-	// TODO: Rewrite data test
 	t.Parallel()
 
 	type (
@@ -98,7 +97,7 @@ func TestDataReadWrite(t *testing.T) {
 			wantErr:  nil,
 			wantKind: kindC,
 			updater: func(o any) error {
-				v, e := As[typeC](o)
+				v, e := As[*typeC](o)
 				if e != nil {
 					return e
 				}
@@ -114,7 +113,7 @@ func TestDataReadWrite(t *testing.T) {
 				}
 			},
 			converter: func(t *testing.T, o any) any {
-				v, e := As[typeC](o)
+				v, e := As[*typeC](o)
 				require.NoError(t, e)
 
 				return v
@@ -138,7 +137,7 @@ func TestDataReadWrite(t *testing.T) {
 			wantErr:  nil,
 			wantKind: kindB,
 			updater: func(o any) error {
-				_, e := As[typeB](o)
+				_, e := As[*typeB](o)
 
 				return e
 			},
@@ -148,7 +147,7 @@ func TestDataReadWrite(t *testing.T) {
 				}
 			},
 			converter: func(t *testing.T, o any) any {
-				v, e := As[typeB](o)
+				v, e := As[*typeB](o)
 				require.NoError(t, e)
 
 				return v
@@ -164,7 +163,7 @@ func TestDataReadWrite(t *testing.T) {
 			wantErr:  nil,
 			wantKind: kindA,
 			updater: func(o any) error {
-				_, e := As[typeA](o)
+				_, e := As[*typeA](o)
 
 				return e
 			},
@@ -172,7 +171,7 @@ func TestDataReadWrite(t *testing.T) {
 				return &typeA{}
 			},
 			converter: func(t *testing.T, o any) any {
-				v, e := As[typeA](o)
+				v, e := As[*typeA](o)
 				require.NoError(t, e)
 
 				return v
@@ -192,32 +191,28 @@ func TestDataReadWrite(t *testing.T) {
 				return
 			}
 
-			//			require.Equal(t, tt.wantKind, i.Kind())
-
 			// Update content
 			e = tt.updater(i)
 			require.NoError(t, e)
 
-			/*
-				// Check write operation
-				buf := new(bytes.Buffer)
-				e = i.Write(buf, tt.args.codec)
-				require.NoError(t, e)
+			// Check write operation
+			var raw Bytes
+			raw, e = Encode(tt.args.codec, i)
+			require.NoError(t, e)
 
-				// Produce entity w/o setup
-				i, e = tt.args.producer()
-				require.NoError(t, e)
+			// Produce entity w/o setup
+			i, e = tt.args.producer()
+			require.NoError(t, e)
 
-				// Check read operation
-				e = i.Read(buf, tt.args.codec)
-				require.NoError(t, e)
+			// Check read operation
+			e = Decode(tt.args.codec, raw, i)
+			require.NoError(t, e)
 
-				expected := tt.expected()
+			expected := tt.expected()
 
-				got := tt.converter(t, i)
+			got := tt.converter(t, i)
 
-				require.Equal(t, expected, got)
-			*/
+			require.Equal(t, expected, got)
 		})
 	}
 }
