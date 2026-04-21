@@ -37,6 +37,26 @@ func WithTaskProducer(kind string, producer TaskProducer) data.Option {
 	})
 }
 
+// EncodeTask encode task context to the byte sequence
+func (i *TaskManager) EncodeTask(kind string, task Task) (data.Bytes, error) {
+	return i.Encode(kind, task)
+}
+
+// DecodeTask bytes sequence to the task context
+func (i *TaskManager) DecodeTask(source data.Bytes, setup ...data.Setup) (string, Task, error) {
+	kind, o, e := i.Decode(source, setup...)
+	if e != nil {
+		return kind, nil, e
+	}
+
+	var task Task
+	if task, e = data.As[Task](o); e != nil {
+		return kind, nil, e
+	}
+
+	return kind, task, nil
+}
+
 // NewTask return new task context
 func (i *TaskManager) NewTask(kind string, setup ...data.Setup) (Task, error) {
 	o, e := i.New(kind, setup...)
