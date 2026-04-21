@@ -13,7 +13,6 @@ import (
 	io "io"
 	reflect "reflect"
 
-	data "github.com/vedga/lib-go-transaction/data"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -66,69 +65,4 @@ func (m *MockCodec) Write(w io.Writer, o any) error {
 func (mr *MockCodecMockRecorder) Write(w, o any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Write", reflect.TypeOf((*MockCodec)(nil).Write), w, o)
-}
-
-// MockSerializable is a mock of Serializable interface.
-type MockSerializable struct {
-	ctrl     *gomock.Controller
-	recorder *MockSerializableMockRecorder
-}
-
-// MockSerializableMockRecorder is the mock recorder for MockSerializable.
-type MockSerializableMockRecorder struct {
-	mock *MockSerializable
-}
-
-// NewMockSerializable creates a new mock instance.
-func NewMockSerializable(ctrl *gomock.Controller) *MockSerializable {
-	mock := &MockSerializable{ctrl: ctrl}
-	mock.recorder = &MockSerializableMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockSerializable) EXPECT() *MockSerializableMockRecorder {
-	return m.recorder
-}
-
-// Kind mocks base method.
-func (m *MockSerializable) Kind() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Kind")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// Kind indicates an expected call of Kind.
-func (mr *MockSerializableMockRecorder) Kind() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Kind", reflect.TypeOf((*MockSerializable)(nil).Kind))
-}
-
-// Read mocks base method.
-func (m *MockSerializable) Read(r io.Reader, codec data.Codec) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Read", r, codec)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Read indicates an expected call of Read.
-func (mr *MockSerializableMockRecorder) Read(r, codec any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Read", reflect.TypeOf((*MockSerializable)(nil).Read), r, codec)
-}
-
-// Write mocks base method.
-func (m *MockSerializable) Write(w io.Writer, codec data.Codec) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Write", w, codec)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Write indicates an expected call of Write.
-func (mr *MockSerializableMockRecorder) Write(w, codec any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Write", reflect.TypeOf((*MockSerializable)(nil).Write), w, codec)
 }

@@ -2,14 +2,6 @@ package data
 
 import (
 	"errors"
-	"io"
-)
-
-type (
-	implementation[T any] struct {
-		kind string
-		o    *T
-	}
 )
 
 var (
@@ -18,8 +10,8 @@ var (
 )
 
 // NewProducer return new producer of entity type T
-func NewProducer[T any](kind string) Producer {
-	return func(setup ...Setup) (Serializable, error) {
+func NewProducer[T any]() Producer {
+	return func(setup ...Setup) (any, error) {
 		o := new(T)
 
 		for _, fn := range setup {
@@ -28,35 +20,26 @@ func NewProducer[T any](kind string) Producer {
 			}
 		}
 
-		return &implementation[T]{
-			kind: kind,
-			o:    o,
-		}, nil
+		return o, nil
 	}
 }
 
-// Ref return pointer to the value of required type or error
-func Ref[T any](v Serializable) (*T, error) {
-	if i, valid := v.(*implementation[T]); valid {
-		return i.o, nil
+// NewSetup return setup implementation for specified type
+func NewSetup[T any](setup func(*T) error) Setup {
+	return func(v any) error {
+		if o, compatible := v.(*T); compatible {
+			return setup(o)
+		}
+
+		return ErrInvalidTransformation
+	}
+}
+
+// As return pointer to the value of required type or error
+func As[T any](v any) (*T, error) {
+	if i, valid := v.(*T); valid {
+		return i, nil
 	}
 
 	return nil, ErrInvalidTransformation
-}
-
-// Kind implementation Serializable interface
-func (i *implementation[T]) Kind() string {
-	return i.kind
-}
-
-// Write implementation Serializable interface
-// This method write only value content from the current place, kind not used.
-func (i *implementation[T]) Write(w io.Writer, codec Codec) error {
-	return codec.Write(w, i.o)
-}
-
-// Read implementation Serializable interface
-// This method read only value content to the current place, kind value stay unchanged.
-func (i *implementation[T]) Read(r io.Reader, codec Codec) error {
-	return codec.Read(r, i.o)
 }

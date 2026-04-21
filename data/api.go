@@ -14,16 +14,9 @@ type (
 		Read(r io.Reader, o any) error
 	}
 
-	// Serializable interface allow object to save and load by readers
-	Serializable interface {
-		Write(w io.Writer, codec Codec) error
-		Read(r io.Reader, codec Codec) error
-		Kind() string
-	}
-
 	// Setup function declaration
 	Setup func(o any) error
 
 	// Producer function for serializable objects
-	Producer func(setup ...Setup) (Serializable, error)
+	Producer func(setup ...Setup) (any, error)
 )

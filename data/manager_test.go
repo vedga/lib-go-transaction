@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewManager(t *testing.T) {
+func TestManager(t *testing.T) {
 	t.Parallel()
 
 	type (
@@ -22,7 +22,8 @@ func TestNewManager(t *testing.T) {
 
 		args struct {
 			options []Option
-			content Serializable
+			kind    string
+			content any
 			setup   []Setup
 		}
 	)
@@ -38,32 +39,33 @@ func TestNewManager(t *testing.T) {
 		name      string
 		args      args
 		wantError error
-		want      Serializable
+		want      any
 	}{
 		// TODO: All other case tests: unsupported type etc...
 		{
 			name: "success",
 			args: args{
 				options: []Option{
-					WithProducer(NewProducer[int](kindInt)),
-					WithProducer(NewProducer[typeA](kindA)),
-					WithProducer(NewProducer[typeB](kindB)),
-					WithProducer(NewProducer[typeC](kindC)),
+					WithProducer(kindInt, NewProducer[int]()),
+					WithProducer(kindA, NewProducer[typeA]()),
+					WithProducer(kindB, NewProducer[typeB]()),
+					WithProducer(kindC, NewProducer[typeC]()),
 				},
 				setup: []Setup{},
-				content: func() Serializable {
-					o, _ := NewProducer[typeB](kindB)(NewSetup(func(o *typeB) error {
+				kind:  kindB,
+				content: func() any {
+					o, _ := NewProducer[typeB]()(NewSetup(func(o *typeB) error {
 						o.FieldInt = 42
 						return nil
 					}))
-					v, _ := Ref[typeB](o)
+					v, _ := As[typeB](o)
 					v.FieldInt = -1234
 					return o
 				}(),
 			},
-			want: func() Serializable {
-				o, _ := NewProducer[typeB](kindB)()
-				v, _ := Ref[typeB](o)
+			want: func() any {
+				o, _ := NewProducer[typeB]()()
+				v, _ := As[typeB](o)
 				v.FieldInt = -1234
 				return o
 			}(),
@@ -75,8 +77,7 @@ func TestNewManager(t *testing.T) {
 
 			i := NewManager(tt.args.options...)
 
-			buf := NewBytesReaderWriter(nil)
-			e := i.Write(buf, tt.args.content)
+			buf, e := i.Encode(tt.args.kind, tt.args.content)
 			assert.Condition(t, func() bool {
 				return errors.Is(e, tt.wantError)
 			})
@@ -84,10 +85,14 @@ func TestNewManager(t *testing.T) {
 				return
 			}
 
-			var got Serializable
-			got, e = i.Read(buf, tt.args.setup...)
+			var (
+				kind string
+				got  any
+			)
+			kind, got, e = i.Decode(buf, tt.args.setup...)
 			assert.NoError(t, e)
 
+			assert.Equal(t, tt.args.kind, kind)
 			assert.Equal(t, tt.want, got)
 		})
 	}

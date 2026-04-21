@@ -1,6 +1,7 @@
 package data
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -50,16 +51,8 @@ func NewManager(options ...Option) *Manager {
 }
 
 // WithProducer add data producer
-func WithProducer(producer Producer) Option {
+func WithProducer(kind string, producer Producer) Option {
 	return func(i *Manager) {
-		// Try to create entity w/o special data setup options.
-		o, e := producer()
-		if e != nil {
-			panic(fmt.Sprintf("data producer instantiation error: %v", e))
-		}
-
-		// Check for duplicate producer instantiation
-		kind := o.Kind()
 		if _, dup := i.producers[kind]; dup {
 			panic(fmt.Sprintf("data producer already defined: %v", kind))
 		}
@@ -68,19 +61,27 @@ func WithProducer(producer Producer) Option {
 	}
 }
 
-// Write object to the io.Writer
-func (i *Manager) Write(w io.Writer, o Serializable) error {
-	b := NewBytesReaderWriter(nil)
+// Encode object to the byte sequence
+func (i *Manager) Encode(kind string, o any) (Bytes, error) {
+	b := new(bytes.Buffer)
+	if e := i.Write(b, kind, o); e != nil {
+		return nil, e
+	}
 
-	// Encode data
-	if e := o.Write(b, i.innerCodec); e != nil {
+	return b.Bytes(), nil
+}
+
+// Write object to the io.Writer with type kind
+func (i *Manager) Write(w io.Writer, kind string, o any) error {
+	encoded, e := Encode(i.innerCodec, o)
+	if e != nil {
 		return fmt.Errorf("data encode error: %w", e)
 	}
 
 	// Write container
 	if e := i.outerCodec.Write(w, &container{
-		Kind: o.Kind(),
-		Data: b.Bytes(),
+		Kind: kind,
+		Data: encoded,
 	}); e != nil {
 		return fmt.Errorf("container encode error: %w", e)
 	}
@@ -88,28 +89,35 @@ func (i *Manager) Write(w io.Writer, o Serializable) error {
 	return nil
 }
 
+// Decode bytes sequence to the object
+func (i *Manager) Decode(source Bytes, setup ...Setup) (string, any, error) {
+	return i.Read(bytes.NewReader(source), setup...)
+}
+
 // Read object from the io.Reader
-func (i *Manager) Read(r io.Reader, setup ...Setup) (Serializable, error) {
+func (i *Manager) Read(r io.Reader, setup ...Setup) (string, any, error) {
 	// Read container
 	c := new(container)
 	if e := i.outerCodec.Read(r, c); e != nil {
-		return nil, fmt.Errorf("container decode error: %w", e)
+		return ``, nil, fmt.Errorf("container decode error: %w", e)
 	}
+
+	kind := c.Kind
 
 	o, e := i.New(c.Kind, setup...)
 	if e != nil {
-		return nil, e
+		return kind, nil, e
 	}
 
-	if e = o.Read(NewBytesReaderWriter(c.Data), i.innerCodec); e != nil {
-		return nil, fmt.Errorf("container decode error: %w", e)
+	if e = Decode(i.innerCodec, c.Data, o); e != nil {
+		return kind, nil, fmt.Errorf("container decode error: %w", e)
 	}
 
-	return o, nil
+	return kind, o, nil
 }
 
 // New return new initialized data for specified kind type
-func (i *Manager) New(kind string, setup ...Setup) (Serializable, error) {
+func (i *Manager) New(kind string, setup ...Setup) (any, error) {
 	producer, supported := i.producers[kind]
 	if !supported {
 		return nil, ErrUnsupportedData
