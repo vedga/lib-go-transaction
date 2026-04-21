@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/vedga/lib-go-transaction/data_old"
+	"github.com/vedga/lib-go-transaction/data"
 	"github.com/vedga/lib-go-transaction/deque"
 )
 
@@ -14,13 +14,12 @@ type (
 	// Transaction interface declaration
 	Transaction interface {
 		Task
-		AddTask(kind string, setup ...data_old.Setup) error
-		AddRollbackTask(kind string, setup ...data_old.Setup) error
-		QueueTask(container *data_old.Descriptor) error
-		QueueRollbackTask(container *data_old.Descriptor) error
+		AddTask(kind string, setup ...data.Setup) error
+		AddRollbackTask(kind string, setup ...data.Setup) error
+		QueueTask(kind string, task Task) error
+		QueueRollbackTask(kind string, task Task) error
 		SetRollback() error
-		NewTask(kind string, setup ...data_old.Setup) (*data_old.Descriptor, error)
-		Backup() (data_old.Raw, error)
+		NewTask(kind string, setup ...data.Setup) (Task, error)
 		NextAttempt(maxRetries uint) error
 	}
 
@@ -34,32 +33,33 @@ type (
 		// Attempt of task execution
 		Attempt uint
 		// PendingTasks contain tasks sequence for execute transaction
-		PendingTasks *deque.Deque[data_old.Raw]
+		PendingTasks *deque.Deque[data.Bytes]
 		// RollbackStack contain transaction rollback sequence
-		RollbackStack *deque.Deque[data_old.Raw]
+		RollbackStack *deque.Deque[data.Bytes]
 	}
 )
 
-func withConstructor(ID string) data_old.Setup {
-	return data_old.NewSetup[implementation](func(o *implementation) error {
+func withConstructor(ID string) data.Setup {
+	return data.NewSetup[implementation](func(o *implementation) error {
 		o.ID = ID
-		o.PendingTasks = deque.New[data_old.Raw](0)
-		o.RollbackStack = deque.New[data_old.Raw](0)
+		o.PendingTasks = deque.New[data.Bytes](0)
+		o.RollbackStack = deque.New[data.Bytes](0)
 
 		return nil
 	})
 }
 
-func withTransactionManager(manager *Manager) data_old.Setup {
-	return data_old.NewSetup[implementation](func(o *implementation) error {
+func withTransactionManager(manager *Manager) data.Setup {
+	return data.NewSetup[implementation](func(o *implementation) error {
 		o.manager = manager
 
 		return nil
 	})
 }
 
-func withClone(tx Transaction) data_old.Setup {
-	return data_old.NewSetup[implementation](func(o *implementation) error {
+/*
+func withClone(tx Transaction) data.Setup {
+	return data.NewSetup[implementation](func(o *implementation) error {
 		if i, theSame := tx.(*implementation); theSame {
 			// Clone fields
 			o.ID = i.ID
@@ -73,6 +73,7 @@ func withClone(tx Transaction) data_old.Setup {
 		return errors.New("only same transaction type supported yet")
 	})
 }
+*/
 
 // Run transaction
 // Return values:
@@ -86,7 +87,7 @@ func (i *implementation) Run(ctx context.Context, tx Transaction) error {
 		return errors.New("nested transactions are not supported")
 	}
 
-	if task := i.nextTask(); task != nil {
+	if _, task := i.nextTask(); task != nil {
 		// Task supported by this implementation, reset attempt counter because transaction may be backup in the
 		// task if outbox pattern is used.
 		i.Attempt = 0
@@ -98,8 +99,8 @@ func (i *implementation) Run(ctx context.Context, tx Transaction) error {
 	return nil
 }
 
-func (i *implementation) nextTask() Task {
-	var q *deque.Deque[data_old.Raw]
+func (i *implementation) nextTask() (string, Task) {
+	var q *deque.Deque[data.Bytes]
 	if i.RollbackIndicator {
 		q = i.RollbackStack
 	} else {
@@ -109,13 +110,13 @@ func (i *implementation) nextTask() Task {
 	if encoded, present := q.PopFront(); present {
 		// Not all tasks complete
 		// Note: task removed from current transaction at this point
-		if task, e := i.manager.RestoreTask(encoded); e == nil && task != nil {
+		if kind, task, e := i.manager.DecodeTask(encoded); e == nil && task != nil {
 			// Task supported by this implementation
-			return task
+			return kind, task
 		}
 	}
 
-	return nil
+	return ``, nil
 }
 
 // SetRollback transaction indicator
@@ -131,30 +132,30 @@ func (i *implementation) SetRollback() error {
 }
 
 // AddTask add task to the transaction
-func (i *implementation) AddTask(kind string, setup ...data_old.Setup) error {
-	container, e := i.NewTask(kind, setup...)
+func (i *implementation) AddTask(kind string, setup ...data.Setup) error {
+	task, e := i.NewTask(kind, setup...)
 	if e != nil {
 		return fmt.Errorf(`create new task error: %w`, e)
 	}
 
 	// Queue task for execution
-	return i.QueueTask(container)
+	return i.QueueTask(kind, task)
 }
 
 // AddRollbackTask add rollback task to the transaction
-func (i *implementation) AddRollbackTask(kind string, setup ...data_old.Setup) error {
-	container, e := i.NewTask(kind, setup...)
+func (i *implementation) AddRollbackTask(kind string, setup ...data.Setup) error {
+	task, e := i.NewTask(kind, setup...)
 	if e != nil {
 		return fmt.Errorf(`create new rollback task error: %w`, e)
 	}
 
 	// Queue task for execution
-	return i.QueueRollbackTask(container)
+	return i.QueueRollbackTask(kind, task)
 }
 
 // QueueTask task for execution
-func (i *implementation) QueueTask(taskDescriptor *data_old.Descriptor) error {
-	encodedTask, e := i.manager.EncodeTask(taskDescriptor)
+func (i *implementation) QueueTask(kind string, task Task) error {
+	encodedTask, e := i.manager.EncodeTask(kind, task)
 	if e != nil {
 		return e
 	}
@@ -166,8 +167,8 @@ func (i *implementation) QueueTask(taskDescriptor *data_old.Descriptor) error {
 }
 
 // QueueRollbackTask for possible rollback
-func (i *implementation) QueueRollbackTask(taskDescriptor *data_old.Descriptor) error {
-	encodedTask, e := i.manager.EncodeTask(taskDescriptor)
+func (i *implementation) QueueRollbackTask(kind string, task Task) error {
+	encodedTask, e := i.manager.EncodeTask(kind, task)
 	if e != nil {
 		return e
 	}
@@ -179,13 +180,8 @@ func (i *implementation) QueueRollbackTask(taskDescriptor *data_old.Descriptor) 
 }
 
 // NewTask return new task context at data_old exchange format
-func (i *implementation) NewTask(kind string, setup ...data_old.Setup) (*data_old.Descriptor, error) {
+func (i *implementation) NewTask(kind string, setup ...data.Setup) (Task, error) {
 	return i.manager.NewTask(kind, setup...)
-}
-
-// Backup transaction
-func (i *implementation) Backup() (data_old.Raw, error) {
-	return i.manager.Encode(i.manager.NewTxDescriptor(withClone(i)))
 }
 
 // NextAttempt check if next retry attempt is possible

@@ -4,14 +4,14 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/vedga/lib-go-transaction/data_old"
+	"github.com/vedga/lib-go-transaction/data"
 )
 
 type (
 	// Manager implementation
 	Manager struct {
 		newID       func() string
-		dataOptions []data_old.Option
+		taskOptions []data.Option
 		txManager   *TaskManager
 		taskManager *TaskManager
 	}
@@ -21,11 +21,11 @@ type (
 )
 
 const (
-	kind = `1.0`
+	txKind = `1.0`
 )
 
 // NewManager return new transaction manager implementation
-func NewManager(taskProducers data_old.Producers, options ...Option) *Manager {
+func NewManager(options ...Option) *Manager {
 	i := &Manager{
 		newID: func() string {
 			return uuid.New().String()
@@ -37,35 +37,40 @@ func NewManager(taskProducers data_old.Producers, options ...Option) *Manager {
 		opt(i)
 	}
 
-	i.taskManager = NewTaskManager(taskProducers, i.dataOptions...)
-
 	// Task manager for transaction itself
-	i.txManager = NewTaskManager(data_old.Producers{
-		func(setup ...data_old.Setup) (*data_old.Descriptor, error) {
-			// Set manager before execute all other setup commands
-			return data_old.NewDescriptor[implementation](kind,
-				append([]data_old.Setup{
+	i.txManager = NewTaskManager(
+		WithTaskProducer(txKind, func(setup ...data.Setup) (Task, error) {
+			producer := data.NewProducer[*implementation]()
+
+			tx, e := producer(
+				append([]data.Setup{
 					withConstructor(i.newID()),
 					withTransactionManager(i),
-				}, setup...)...)
-		},
-	})
+				}, setup...)...,
+			)
+			if e != nil {
+				return nil, e
+			}
+
+			return data.As[Task](tx)
+		}),
+	)
+	/*
+			data_old.Producers{
+			func(setup ...data_old.Setup) (*data_old.Descriptor, error) {
+				// Set manager before execute all other setup commands
+				return data_old.NewDescriptor[implementation](kind,
+					append([]data_old.Setup{
+						withConstructor(i.newID()),
+						withTransactionManager(i),
+					}, setup...)...)
+			},
+		})
+	*/
+
+	i.taskManager = NewTaskManager(i.taskOptions...)
 
 	return i
-}
-
-// WithOuterCoder apply outer coder
-func WithOuterCoder(coder data_old.Coder) Option {
-	return func(i *Manager) {
-		i.dataOptions = append(i.dataOptions, data_old.WithOuterCoder(coder))
-	}
-}
-
-// WithInnerCoder apply inner coder
-func WithInnerCoder(coder data_old.Coder) Option {
-	return func(i *Manager) {
-		i.dataOptions = append(i.dataOptions, data_old.WithInnerCoder(coder))
-	}
 }
 
 // WithTxIDProducer apply custom transaction ID producer
@@ -75,14 +80,16 @@ func WithTxIDProducer(producer func() string) Option {
 	}
 }
 
-// Encode transaction encoding
-func (i *Manager) Encode(txDescriptor *data_old.Descriptor) (data_old.Raw, error) {
-	return data_old.Backup(i.Coder(txDescriptor))
+// WithTxTaskProducer add task producer
+func WithTxTaskProducer(kind string, producer TaskProducer) Option {
+	return func(i *Manager) {
+		i.taskOptions = append(i.taskOptions, WithTaskProducer(kind, producer))
+	}
 }
 
 // RestoreCheckRetry restore transaction and check if retry limit exceed
-func (i *Manager) RestoreCheckRetry(backup data_old.Raw, retryTaskError *RetryTaskError) (Transaction, error) {
-	tx, e := i.Restore(backup)
+func (i *Manager) RestoreCheckRetry(backup data.Bytes, retryTaskError *RetryTaskError, setup ...data.Setup) (Transaction, error) {
+	_, tx, e := i.Decode(backup, setup...)
 	if e != nil {
 		return nil, e
 	}
@@ -96,6 +103,7 @@ func (i *Manager) RestoreCheckRetry(backup data_old.Raw, retryTaskError *RetryTa
 	return tx, nil
 }
 
+/*
 // Restore transaction from backup
 func (i *Manager) Restore(backup data_old.Raw) (Transaction, error) {
 	var descriptor data_old.Descriptor
@@ -105,55 +113,53 @@ func (i *Manager) Restore(backup data_old.Raw) (Transaction, error) {
 
 	return data_old.DescriptorValue[Transaction](&descriptor)
 }
+*/
 
-// Coder return implementation for specified transaction data_old Descriptor
-func (i *Manager) Coder(descriptor *data_old.Descriptor) data_old.Serializable {
-	return i.txManager.Coder(descriptor)
+// Encode transaction context to the byte sequence
+func (i *Manager) Encode(kind string, tx Transaction) (data.Bytes, error) {
+	return i.txManager.EncodeTask(kind, tx)
+}
+
+// Decode bytes sequence to the transaction context
+func (i *Manager) Decode(source data.Bytes, setup ...data.Setup) (string, Transaction, error) {
+	kind, task, e := i.txManager.DecodeTask(source, setup...)
+	if e != nil {
+		return kind, nil, e
+	}
+
+	var tx Transaction
+	if tx, e = data.As[Transaction](task); e != nil {
+		return kind, nil, e
+	}
+
+	return kind, tx, nil
 }
 
 // New return new transaction
-func (i *Manager) New(setup ...data_old.Setup) Transaction {
-	descriptor := i.NewTxDescriptor(setup...)
-
-	tx, e := data_old.DescriptorValue[Transaction](descriptor)
+func (i *Manager) New(setup ...data.Setup) (tx Transaction) {
+	task, e := i.txManager.NewTask(txKind, setup...)
 	if e != nil {
-		panic(fmt.Errorf(`unexpected transaction descriptor error: %w`, e))
+		panic(fmt.Errorf(`unexpected transaction builder error: %v`, e))
+	}
+
+	if tx, e = data.As[Transaction](task); e != nil {
+		panic(fmt.Errorf(`unexpected transaction producer error: %v`, e))
 	}
 
 	return tx
 }
 
-// NewTxDescriptor return new transaction descriptor
-func (i *Manager) NewTxDescriptor(setup ...data_old.Setup) *data_old.Descriptor {
-	descriptor, e := i.txManager.New(kind, setup...)
-	if e != nil {
-		panic(fmt.Errorf(`create transaction descriptor error: %w`, e))
-	}
-
-	return descriptor
+// EncodeTask encode task context to the byte sequence
+func (i *Manager) EncodeTask(kind string, task Task) (data.Bytes, error) {
+	return i.taskManager.EncodeTask(kind, task)
 }
 
-// EncodeTask perform task encoding
-func (i *Manager) EncodeTask(taskDescriptor *data_old.Descriptor) (data_old.Raw, error) {
-	return data_old.Backup(i.TaskCoder(taskDescriptor))
-}
-
-// RestoreTask task from backup
-func (i *Manager) RestoreTask(backup data_old.Raw) (Task, error) {
-	var descriptor data_old.Descriptor
-	if e := data_old.Restore(i.TaskCoder(&descriptor), backup); e != nil {
-		return nil, e
-	}
-
-	return data_old.DescriptorValue[Task](&descriptor)
-}
-
-// TaskCoder return implementation for specified task data_old Descriptor
-func (i *Manager) TaskCoder(descriptor *data_old.Descriptor) data_old.Serializable {
-	return i.taskManager.Coder(descriptor)
+// DecodeTask bytes sequence to the task context
+func (i *Manager) DecodeTask(source data.Bytes, setup ...data.Setup) (string, Task, error) {
+	return i.taskManager.DecodeTask(source, setup...)
 }
 
 // NewTask return new task container
-func (i *Manager) NewTask(kind string, setup ...data_old.Setup) (*data_old.Descriptor, error) {
-	return i.taskManager.New(kind, setup...)
+func (i *Manager) NewTask(kind string, setup ...data.Setup) (Task, error) {
+	return i.taskManager.NewTask(kind, setup...)
 }

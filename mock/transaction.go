@@ -14,7 +14,7 @@ import (
 	reflect "reflect"
 
 	transaction "github.com/vedga/lib-go-transaction"
-	data "github.com/vedga/lib-go-transaction/data_old"
+	data "github.com/vedga/lib-go-transaction/data"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -79,30 +79,15 @@ func (mr *MockTransactionMockRecorder) AddTask(kind any, setup ...any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTask", reflect.TypeOf((*MockTransaction)(nil).AddTask), varargs...)
 }
 
-// Backup mocks base method.
-func (m *MockTransaction) Backup() (data.Raw, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Backup")
-	ret0, _ := ret[0].(data.Raw)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Backup indicates an expected call of Backup.
-func (mr *MockTransactionMockRecorder) Backup() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Backup", reflect.TypeOf((*MockTransaction)(nil).Backup))
-}
-
 // NewTask mocks base method.
-func (m *MockTransaction) NewTask(kind string, setup ...data.Setup) (*data.Descriptor, error) {
+func (m *MockTransaction) NewTask(kind string, setup ...data.Setup) (transaction.Task, error) {
 	m.ctrl.T.Helper()
 	varargs := []any{kind}
 	for _, a := range setup {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "NewTask", varargs...)
-	ret0, _ := ret[0].(*data.Descriptor)
+	ret0, _ := ret[0].(transaction.Task)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -129,31 +114,31 @@ func (mr *MockTransactionMockRecorder) NextAttempt(maxRetries any) *gomock.Call 
 }
 
 // QueueRollbackTask mocks base method.
-func (m *MockTransaction) QueueRollbackTask(container *data.Descriptor) error {
+func (m *MockTransaction) QueueRollbackTask(kind string, task transaction.Task) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "QueueRollbackTask", container)
+	ret := m.ctrl.Call(m, "QueueRollbackTask", kind, task)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // QueueRollbackTask indicates an expected call of QueueRollbackTask.
-func (mr *MockTransactionMockRecorder) QueueRollbackTask(container any) *gomock.Call {
+func (mr *MockTransactionMockRecorder) QueueRollbackTask(kind, task any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueueRollbackTask", reflect.TypeOf((*MockTransaction)(nil).QueueRollbackTask), container)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueueRollbackTask", reflect.TypeOf((*MockTransaction)(nil).QueueRollbackTask), kind, task)
 }
 
 // QueueTask mocks base method.
-func (m *MockTransaction) QueueTask(container *data.Descriptor) error {
+func (m *MockTransaction) QueueTask(kind string, task transaction.Task) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "QueueTask", container)
+	ret := m.ctrl.Call(m, "QueueTask", kind, task)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // QueueTask indicates an expected call of QueueTask.
-func (mr *MockTransactionMockRecorder) QueueTask(container any) *gomock.Call {
+func (mr *MockTransactionMockRecorder) QueueTask(kind, task any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueueTask", reflect.TypeOf((*MockTransaction)(nil).QueueTask), container)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueueTask", reflect.TypeOf((*MockTransaction)(nil).QueueTask), kind, task)
 }
 
 // Run mocks base method.
