@@ -17,6 +17,6 @@ type (
 	// Setup function declaration
 	Setup func(o any) error
 
-	// Producer function for serializable objects
+	// Producer function
 	Producer func(setup ...Setup) (any, error)
 )
