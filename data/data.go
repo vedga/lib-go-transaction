@@ -36,10 +36,11 @@ func NewSetup[T any](setup func(*T) error) Setup {
 }
 
 // As return pointer to the value of required type or error
-func As[T any](v any) (*T, error) {
-	if i, valid := v.(*T); valid {
+func As[T any](v any) (T, error) {
+	if i, valid := v.(T); valid {
 		return i, nil
 	}
 
-	return nil, ErrInvalidTransformation
+	var none T
+	return none, ErrInvalidTransformation
 }

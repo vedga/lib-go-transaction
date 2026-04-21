@@ -61,7 +61,7 @@ func TestDataReadWrite(t *testing.T) {
 			wantErr:  nil,
 			wantKind: kindInt,
 			updater: func(o any) error {
-				v, e := As[int](o)
+				v, e := As[*int](o)
 				if e != nil {
 					return e
 				}
@@ -74,7 +74,7 @@ func TestDataReadWrite(t *testing.T) {
 				return &[]int{-122}[0]
 			},
 			converter: func(t *testing.T, o any) any {
-				v, e := As[int](o)
+				v, e := As[*int](o)
 				require.NoError(t, e)
 
 				return v

@@ -58,14 +58,14 @@ func TestManager(t *testing.T) {
 						o.FieldInt = 42
 						return nil
 					}))
-					v, _ := As[typeB](o)
+					v, _ := As[*typeB](o)
 					v.FieldInt = -1234
 					return o
 				}(),
 			},
 			want: func() any {
 				o, _ := NewProducer[typeB]()()
-				v, _ := As[typeB](o)
+				v, _ := As[*typeB](o)
 				v.FieldInt = -1234
 				return o
 			}(),
