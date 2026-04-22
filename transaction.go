@@ -42,6 +42,8 @@ type (
 var (
 	// ErrNoAvailableTasks indicate no available tasks inside transaction
 	ErrNoAvailableTasks = errors.New("no available tasks")
+	// ErrOutboxPattern indicate using outbox pattern
+	ErrOutboxPattern = errors.New("outbox pattern")
 )
 
 func withConstructor(txID string) data.Setup {
@@ -98,6 +100,11 @@ func (i *implementation) Run(ctx context.Context, txKind string, tx Transaction)
 		e := task.Run(ctx, taskKind, i)
 		if e != nil {
 			// Some error occurred
+			if errors.Is(e, ErrOutboxPattern) {
+				// Using outbox pattern indicate no more tasks in this tran
+				return ErrNoAvailableTasks
+			}
+
 			return e
 		}
 

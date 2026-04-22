@@ -46,6 +46,123 @@ func TestTransactionProcessing(t *testing.T) {
 		wantTx  func(t *testing.T, m *transaction.Manager, txOriginal transaction.Transaction) transaction.Transaction
 	}{
 		{
+			name: "Transaction outbox pattern",
+			args: args{
+				newTransaction: func(t *testing.T, mc *gomock.Controller) (*transaction.Manager, data.Bytes) {
+					ta := mock.NewMockTask(mc)
+					tb := mock.NewMockTask(mc)
+
+					// Создаем менеджер с двумя задачами
+					m := transaction.NewManager(
+						transaction.WithTxTaskProducer(kindA, func(setup ...data.Setup) (transaction.Task, error) {
+							producer := data.NewProducer[taskA]()
+
+							task, e := producer(append([]data.Setup{
+								// Имплементация taskA
+								data.NewSetup[taskA](func(o *taskA) error {
+									o.MockTask = ta
+									return nil
+								}),
+							}, setup...)...)
+							if e != nil {
+								return nil, e
+							}
+
+							return data.As[transaction.Task](task)
+						}),
+						transaction.WithTxTaskProducer(kindB, func(setup ...data.Setup) (transaction.Task, error) {
+							producer := data.NewProducer[taskB]()
+
+							task, e := producer(append([]data.Setup{
+								// Имплементация taskA
+								data.NewSetup[taskB](func(o *taskB) error {
+									o.MockTask = tb
+									return nil
+								}),
+							}, setup...)...)
+							if e != nil {
+								return nil, e
+							}
+
+							return data.As[transaction.Task](task)
+						}),
+					)
+
+					tx := m.New()
+
+					e := tx.AddTask(kindA)
+					assert.NoError(t, e)
+					e = tx.AddTask(kindB)
+					assert.NoError(t, e)
+
+					gomock.InOrder(
+						ta.EXPECT().Run(
+							gomock.Any(),
+							gomock.Eq(kindA),
+							gomock.Any(),
+						).DoAndReturn(func(_ context.Context, _ string, tx transaction.Transaction) error {
+							// Add rollback operations
+							task, taskErr := tx.NewTask(kindA, data.NewSetup[taskA](func(o *taskA) error {
+								// Additional setup for taskA
+								o.Field = -1234
+								return nil
+							}))
+							assert.NoError(t, taskErr)
+
+							taskErr = tx.QueueRollbackTask(kindA, task)
+							assert.NoError(t, taskErr)
+
+							var encodedTx data.Bytes
+							encodedTx, taskErr = tx.Encode()
+							assert.NoError(t, taskErr)
+
+							// Verify encoded transaction to store at the database
+							newTx := m.New(
+								// Must be same transaction ID
+								transaction.WithTransactionID(tx.ID()),
+							)
+
+							// Pending only task B
+							taskErr = newTx.AddTask(kindB)
+							assert.NoError(t, taskErr)
+
+							// But new task must be in the rollback stack
+							task, taskErr = m.NewTask(kindA, data.NewSetup[taskA](func(o *taskA) error {
+								// Additional setup for taskA
+								o.Field = -1234
+								return nil
+							}))
+							assert.NoError(t, taskErr)
+							taskErr = newTx.QueueRollbackTask(kindA, task)
+							assert.NoError(t, taskErr)
+
+							var outboxTx transaction.Transaction
+							_, outboxTx, taskErr = m.Decode(encodedTx)
+							assert.NoError(t, taskErr)
+
+							// Check expected and outbox transactions
+							assert.Equal(t, newTx, outboxTx)
+
+							// Task use outbox pattern
+							return transaction.ErrOutboxPattern
+						}),
+					)
+
+					var encodedTx data.Bytes
+					encodedTx, e = tx.Encode()
+					assert.NoError(t, e)
+
+					return m, encodedTx
+				},
+			},
+			wantErr: nil,
+			wantTx: func(t *testing.T, m *transaction.Manager, txOriginal transaction.Transaction) transaction.Transaction {
+				// No transaction to send because outbox pattern is used
+				return nil
+			},
+		},
+		//
+		{
 			name: "Execute last task in the transaction",
 			args: args{
 				newTransaction: func(t *testing.T, mc *gomock.Controller) (*transaction.Manager, data.Bytes) {
