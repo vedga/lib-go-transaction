@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/vedga/lib-go-transaction/data"
@@ -23,6 +24,10 @@ type (
 		QueueTask(kind string, task Task) error
 		QueueEncodedTask(encodedTask data.Bytes) error
 		QueueRollbackTask(kind string, task Task) error
+		PushData(items ...data.Bytes)
+		PopData() (data.Bytes, bool)
+		DataCount() int
+		ClearData()
 		SetRollback() error
 		NewTask(kind string, setup ...data.Setup) (Task, error)
 		NextAttempt(maxRetries uint) error
@@ -34,8 +39,9 @@ type (
 		TxID              string                   `json:"id"`
 		RollbackIndicator bool                     `json:"ri"`
 		TaskAttempt       uint                     `json:"ta"`
-		PendingTasks      *deque.Deque[data.Bytes] `json:"p"`
-		RollbackStack     *deque.Deque[data.Bytes] `json:"r"`
+		PendingTasks      *deque.Deque[data.Bytes] `json:"tq"`
+		RollbackStack     *deque.Deque[data.Bytes] `json:"rs"`
+		DataStack         *deque.Deque[data.Bytes] `json:"ds"`
 	}
 )
 
@@ -50,6 +56,7 @@ func withConstructor(txID string) data.Setup {
 	return data.NewSetup[implementation](func(o *implementation) error {
 		o.PendingTasks = deque.New[data.Bytes](0)
 		o.RollbackStack = deque.New[data.Bytes](0)
+		o.DataStack = deque.New[data.Bytes](0)
 
 		// Also setup transaction ID
 		setup := WithTransactionID(txID)
@@ -220,6 +227,31 @@ func (i *implementation) QueueRollbackTask(kind string, task Task) error {
 	i.RollbackStack.PushFront(encodedTask)
 
 	return nil
+}
+
+// PushData push custom data to the data stack
+// Note:
+// If using multiple items then it
+func (i *implementation) PushData(items ...data.Bytes) {
+	// Reverse multiple items for stack ordering
+	slices.Reverse(items)
+
+	i.DataStack.PushFront(items...)
+}
+
+// PopData return most custom data value if any
+func (i *implementation) PopData() (data.Bytes, bool) {
+	return i.DataStack.PopFront()
+}
+
+// DataCount return number of items in data stack
+func (i *implementation) DataCount() int {
+	return i.DataStack.Size()
+}
+
+// ClearData clear data stack
+func (i *implementation) ClearData() {
+	i.DataStack.Clear()
 }
 
 // NewTask return new task context at data_old exchange format

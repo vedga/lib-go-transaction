@@ -93,6 +93,32 @@ func (mr *MockTransactionMockRecorder) Attempt() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Attempt", reflect.TypeOf((*MockTransaction)(nil).Attempt))
 }
 
+// ClearData mocks base method.
+func (m *MockTransaction) ClearData() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "ClearData")
+}
+
+// ClearData indicates an expected call of ClearData.
+func (mr *MockTransactionMockRecorder) ClearData() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearData", reflect.TypeOf((*MockTransaction)(nil).ClearData))
+}
+
+// DataCount mocks base method.
+func (m *MockTransaction) DataCount() int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DataCount")
+	ret0, _ := ret[0].(int)
+	return ret0
+}
+
+// DataCount indicates an expected call of DataCount.
+func (mr *MockTransactionMockRecorder) DataCount() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DataCount", reflect.TypeOf((*MockTransaction)(nil).DataCount))
+}
+
 // Encode mocks base method.
 func (m *MockTransaction) Encode() (data.Bytes, error) {
 	m.ctrl.T.Helper()
@@ -154,6 +180,37 @@ func (m *MockTransaction) NextAttempt(maxRetries uint) error {
 func (mr *MockTransactionMockRecorder) NextAttempt(maxRetries any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NextAttempt", reflect.TypeOf((*MockTransaction)(nil).NextAttempt), maxRetries)
+}
+
+// PopData mocks base method.
+func (m *MockTransaction) PopData() (data.Bytes, bool) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PopData")
+	ret0, _ := ret[0].(data.Bytes)
+	ret1, _ := ret[1].(bool)
+	return ret0, ret1
+}
+
+// PopData indicates an expected call of PopData.
+func (mr *MockTransactionMockRecorder) PopData() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PopData", reflect.TypeOf((*MockTransaction)(nil).PopData))
+}
+
+// PushData mocks base method.
+func (m *MockTransaction) PushData(items ...data.Bytes) {
+	m.ctrl.T.Helper()
+	varargs := []any{}
+	for _, a := range items {
+		varargs = append(varargs, a)
+	}
+	m.ctrl.Call(m, "PushData", varargs...)
+}
+
+// PushData indicates an expected call of PushData.
+func (mr *MockTransactionMockRecorder) PushData(items ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PushData", reflect.TypeOf((*MockTransaction)(nil).PushData), items...)
 }
 
 // QueueEncodedTask mocks base method.
