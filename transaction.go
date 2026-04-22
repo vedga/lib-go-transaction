@@ -28,7 +28,7 @@ type (
 		PopData() (data.Bytes, bool)
 		DataCount() int
 		ClearData()
-		SetRollback() error
+		Rollback() error
 		NewTask(kind string, setup ...data.Setup) (Task, error)
 		NextAttempt(maxRetries uint) error
 	}
@@ -164,8 +164,8 @@ func (i *implementation) taskQueue() *deque.Deque[data.Bytes] {
 	return i.PendingTasks
 }
 
-// SetRollback transaction indicator
-func (i *implementation) SetRollback() error {
+// Rollback transaction
+func (i *implementation) Rollback() error {
 	if i.RollbackIndicator {
 		// Already at rollback state
 		return errors.New("invalid transaction state")

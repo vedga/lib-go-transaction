@@ -102,7 +102,7 @@ func TestManager_Transaction(t *testing.T) {
 			assert.NoError(t, e)
 
 			// Modify transaction
-			e = got.SetRollback()
+			e = got.Rollback()
 			assert.NoError(t, e)
 
 			assert.NotEqual(t, tx, got)
