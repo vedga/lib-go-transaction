@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	transaction "github.com/vedga/lib-go-transaction"
-	"github.com/vedga/lib-go-transaction/data_old"
+	"github.com/vedga/lib-go-transaction/data"
 	mock "github.com/vedga/lib-go-transaction/mock"
 	"go.uber.org/mock/gomock"
 )
@@ -40,12 +40,18 @@ func TestTransactionExecution(t *testing.T) {
 		kindUnsupported = `unsupported`
 	)
 
-	unsupportedTask, initError := transaction.NewManager(data_old.Producers{
-		// taskA
-		func(setup ...data_old.Setup) (*data_old.Descriptor, error) {
-			return data_old.NewDescriptor[taskUnsupported](kindUnsupported, setup...)
-		},
-	}).NewTask(kindUnsupported)
+	unsupportedTask, initError := transaction.NewManager(
+		transaction.WithTxTaskProducer(kindUnsupported, func(setup ...data.Setup) (transaction.Task, error) {
+			producer := data.NewProducer[taskUnsupported]()
+
+			task, e := producer(setup...)
+			if e != nil {
+				return nil, e
+			}
+
+			return data.As[transaction.Task](task)
+		}),
+	).NewTask(kindUnsupported)
 	assert.NoError(t, initError)
 
 	tests := []struct {
@@ -62,36 +68,38 @@ func TestTransactionExecution(t *testing.T) {
 
 					// Создаем менеджер с двумя задачами
 					m := transaction.NewManager(
-						data_old.Producers{
-							// taskA
-							func(setup ...data_old.Setup) (*data_old.Descriptor, error) {
-								return data_old.NewDescriptor[taskA](kindA,
-									append(
-										[]data_old.Setup{
-											// Имплементация taskA
-											data_old.NewSetup[taskA](func(o *taskA) error {
-												o.MockTask = ta
-												return nil
-											}),
-										},
-										setup...,
-									)...)
-							},
-							// taskB
-							func(setup ...data_old.Setup) (*data_old.Descriptor, error) {
-								return data_old.NewDescriptor[taskB](kindB,
-									append(
-										[]data_old.Setup{
-											// Имплементация taskB
-											data_old.NewSetup[taskB](func(o *taskB) error {
-												o.MockTask = tb
-												return nil
-											}),
-										},
-										setup...,
-									)...)
-							},
-						},
+						transaction.WithTxTaskProducer(kindA, func(setup ...data.Setup) (transaction.Task, error) {
+							producer := data.NewProducer[taskA]()
+
+							task, e := producer(append([]data.Setup{
+								// Имплементация taskA
+								data.NewSetup[taskA](func(o *taskA) error {
+									o.MockTask = ta
+									return nil
+								}),
+							}, setup...)...)
+							if e != nil {
+								return nil, e
+							}
+
+							return data.As[transaction.Task](task)
+						}),
+						transaction.WithTxTaskProducer(kindB, func(setup ...data.Setup) (transaction.Task, error) {
+							producer := data.NewProducer[taskB]()
+
+							task, e := producer(append([]data.Setup{
+								// Имплементация taskA
+								data.NewSetup[taskB](func(o *taskB) error {
+									o.MockTask = tb
+									return nil
+								}),
+							}, setup...)...)
+							if e != nil {
+								return nil, e
+							}
+
+							return data.As[transaction.Task](task)
+						}),
 					)
 
 					tx := m.New()
@@ -145,41 +153,44 @@ func TestTransactionExecution(t *testing.T) {
 
 					// Создаем менеджер с двумя задачами
 					m := transaction.NewManager(
-						data_old.Producers{
-							// taskA
-							func(setup ...data_old.Setup) (*data_old.Descriptor, error) {
-								return data_old.NewDescriptor[taskA](kindA,
-									append(
-										[]data_old.Setup{
-											// Имплементация taskA
-											data_old.NewSetup[taskA](func(o *taskA) error {
-												o.MockTask = ta
-												return nil
-											}),
-										},
-										setup...,
-									)...)
-							},
-							// taskB
-							func(setup ...data_old.Setup) (*data_old.Descriptor, error) {
-								return data_old.NewDescriptor[taskB](kindB,
-									append(
-										[]data_old.Setup{
-											// Имплементация taskB
-											data_old.NewSetup[taskB](func(o *taskB) error {
-												o.MockTask = tb
-												return nil
-											}),
-										},
-										setup...,
-									)...)
-							},
-						},
+						transaction.WithTxTaskProducer(kindA, func(setup ...data.Setup) (transaction.Task, error) {
+							producer := data.NewProducer[taskA]()
+
+							task, e := producer(append([]data.Setup{
+								// Имплементация taskA
+								data.NewSetup[taskA](func(o *taskA) error {
+									o.MockTask = ta
+									return nil
+								}),
+							}, setup...)...)
+							if e != nil {
+								return nil, e
+							}
+
+							return data.As[transaction.Task](task)
+						}),
+						transaction.WithTxTaskProducer(kindB, func(setup ...data.Setup) (transaction.Task, error) {
+							producer := data.NewProducer[taskB]()
+
+							task, e := producer(append([]data.Setup{
+								// Имплементация taskA
+								data.NewSetup[taskB](func(o *taskB) error {
+									o.MockTask = tb
+									return nil
+								}),
+							}, setup...)...)
+							if e != nil {
+								return nil, e
+							}
+
+							return data.As[transaction.Task](task)
+						}),
 					)
 
 					tx := m.New()
 
-					tx.QueueTask(unsupportedTask)
+					e := tx.QueueTask(kindUnsupported, unsupportedTask)
+					assert.NoError(t, e)
 
 					gomock.InOrder()
 
@@ -201,36 +212,38 @@ func TestTransactionExecution(t *testing.T) {
 
 					// Создаем менеджер с двумя задачами
 					m := transaction.NewManager(
-						data_old.Producers{
-							// taskA
-							func(setup ...data_old.Setup) (*data_old.Descriptor, error) {
-								return data_old.NewDescriptor[taskA](kindA,
-									append(
-										[]data_old.Setup{
-											// Имплементация taskA
-											data_old.NewSetup[taskA](func(o *taskA) error {
-												o.MockTask = ta
-												return nil
-											}),
-										},
-										setup...,
-									)...)
-							},
-							// taskB
-							func(setup ...data_old.Setup) (*data_old.Descriptor, error) {
-								return data_old.NewDescriptor[taskB](kindB,
-									append(
-										[]data_old.Setup{
-											// Имплементация taskB
-											data_old.NewSetup[taskB](func(o *taskB) error {
-												o.MockTask = tb
-												return nil
-											}),
-										},
-										setup...,
-									)...)
-							},
-						},
+						transaction.WithTxTaskProducer(kindA, func(setup ...data.Setup) (transaction.Task, error) {
+							producer := data.NewProducer[taskA]()
+
+							task, e := producer(append([]data.Setup{
+								// Имплементация taskA
+								data.NewSetup[taskA](func(o *taskA) error {
+									o.MockTask = ta
+									return nil
+								}),
+							}, setup...)...)
+							if e != nil {
+								return nil, e
+							}
+
+							return data.As[transaction.Task](task)
+						}),
+						transaction.WithTxTaskProducer(kindB, func(setup ...data.Setup) (transaction.Task, error) {
+							producer := data.NewProducer[taskB]()
+
+							task, e := producer(append([]data.Setup{
+								// Имплементация taskA
+								data.NewSetup[taskB](func(o *taskB) error {
+									o.MockTask = tb
+									return nil
+								}),
+							}, setup...)...)
+							if e != nil {
+								return nil, e
+							}
+
+							return data.As[transaction.Task](task)
+						}),
 					)
 
 					tx := m.New()
@@ -258,7 +271,7 @@ func TestTransactionExecution(t *testing.T) {
 			m, tx := tt.args.newTransaction(t, mc)
 
 			for _, wantError := range tt.args.statuses {
-				backup, e := tx.Backup()
+				backup, e := tx.Encode()
 				assert.NoError(t, e)
 
 				e = tx.Run(context.Background(), nil)
