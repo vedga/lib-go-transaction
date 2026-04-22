@@ -98,7 +98,15 @@ func (i *taskB) Run(ctx context.Context, kind string, tx transaction.Transaction
 		_ = d
 	}
 
-	return nil
+	// Use outbox pattern: encode next transaction and write it to the some storage
+	txEncoded, e := tx.Encode()
+	// Check error
+	_ = e
+	// Write encoded transaction to the storage
+	_ = txEncoded
+
+	// Indicate this task use outbox pattern
+	return transaction.ErrOutboxPattern
 }
 
 // OperationTaskA return task A with custom initially context
