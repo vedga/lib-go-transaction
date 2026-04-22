@@ -16,6 +16,7 @@ type (
 	Transaction interface {
 		Task
 		ID() string
+		Attempt() uint
 		Encode() (data.Bytes, error)
 		AddTask(kind string, setup ...data.Setup) error
 		AddRollbackTask(kind string, setup ...data.Setup) error
@@ -32,7 +33,7 @@ type (
 		manager           *Manager
 		TxID              string                   `json:"id"`
 		RollbackIndicator bool                     `json:"ri"`
-		Attempt           uint                     // TODO: Remove?
+		TaskAttempt       uint                     `json:"ta"`
 		PendingTasks      *deque.Deque[data.Bytes] `json:"p"`
 		RollbackStack     *deque.Deque[data.Bytes] `json:"r"`
 	}
@@ -91,7 +92,7 @@ func (i *implementation) Run(ctx context.Context, txKind string, tx Transaction)
 	if taskKind, task := i.nextTask(); task != nil {
 		// Task supported by this implementation, reset attempt counter because transaction may be backup in the
 		// task if outbox pattern is used.
-		i.Attempt = 0
+		i.TaskAttempt = 0
 
 		// Execute task
 		return task.Run(ctx, taskKind, i)
@@ -104,6 +105,11 @@ func (i *implementation) Run(ctx context.Context, txKind string, tx Transaction)
 // ID return transaction ID
 func (i *implementation) ID() string {
 	return i.TxID
+}
+
+// Attempt return task execution attempt
+func (i *implementation) Attempt() uint {
+	return i.TaskAttempt
 }
 
 // Encode transaction context to the byte sequence
@@ -205,9 +211,9 @@ func (i *implementation) NewTask(kind string, setup ...data.Setup) (Task, error)
 // NextAttempt check if next retry attempt is possible
 // Note: This operation increase internal retry counter
 func (i *implementation) NextAttempt(maxRetries uint) error {
-	i.Attempt++
+	i.TaskAttempt++
 
-	if i.Attempt > maxRetries {
+	if i.TaskAttempt > maxRetries {
 		// Retry limit exceed
 		return ErrRetryLimitExceeded
 	}

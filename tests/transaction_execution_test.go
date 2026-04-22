@@ -13,7 +13,7 @@ import (
 )
 
 func TestTransactionProcessing(t *testing.T) {
-	t.Parallel()
+	//	t.Parallel()
 
 	type (
 		taskA struct {
@@ -43,8 +43,97 @@ func TestTransactionProcessing(t *testing.T) {
 		name    string
 		args    args
 		wantErr error
-		wantTx  func(t *testing.T, m *transaction.Manager, txID string) transaction.Transaction
+		wantTx  func(t *testing.T, m *transaction.Manager, txOriginal transaction.Transaction) transaction.Transaction
 	}{
+		{
+			name: "Process first task with retry not exceed. Return modified transaction.",
+			args: args{
+				newTransaction: func(t *testing.T, mc *gomock.Controller) (*transaction.Manager, data.Bytes) {
+					ta := mock.NewMockTask(mc)
+					tb := mock.NewMockTask(mc)
+
+					// Создаем менеджер с двумя задачами
+					m := transaction.NewManager(
+						transaction.WithTxTaskProducer(kindA, func(setup ...data.Setup) (transaction.Task, error) {
+							producer := data.NewProducer[taskA]()
+
+							task, e := producer(append([]data.Setup{
+								// Имплементация taskA
+								data.NewSetup[taskA](func(o *taskA) error {
+									o.MockTask = ta
+									return nil
+								}),
+							}, setup...)...)
+							if e != nil {
+								return nil, e
+							}
+
+							return data.As[transaction.Task](task)
+						}),
+						transaction.WithTxTaskProducer(kindB, func(setup ...data.Setup) (transaction.Task, error) {
+							producer := data.NewProducer[taskB]()
+
+							task, e := producer(append([]data.Setup{
+								// Имплементация taskA
+								data.NewSetup[taskB](func(o *taskB) error {
+									o.MockTask = tb
+									return nil
+								}),
+							}, setup...)...)
+							if e != nil {
+								return nil, e
+							}
+
+							return data.As[transaction.Task](task)
+						}),
+					)
+
+					tx := m.New()
+
+					e := tx.AddTask(kindA)
+					assert.NoError(t, e)
+					e = tx.AddTask(kindB)
+					assert.NoError(t, e)
+
+					gomock.InOrder(
+						ta.EXPECT().Run(
+							gomock.Any(),
+							gomock.Eq(kindA),
+							gomock.Any(),
+						).DoAndReturn(func(_ context.Context, _ string, _ transaction.Transaction) error {
+
+							// Task return no errors
+							return transaction.NewRetryTaskError(1)
+						}),
+					)
+
+					var encodedTx data.Bytes
+					encodedTx, e = tx.Encode()
+					assert.NoError(t, e)
+
+					return m, encodedTx
+				},
+			},
+			wantTx: func(t *testing.T, m *transaction.Manager, txOriginal transaction.Transaction) transaction.Transaction {
+				tx := m.New(
+					// Must be same transaction ID
+					transaction.WithTransactionID(txOriginal.ID()),
+				)
+
+				e := tx.NextAttempt(1)
+
+				// Pending task A
+				e = tx.AddTask(kindA)
+				assert.NoError(t, e)
+
+				// Pending task B
+				e = tx.AddTask(kindB)
+				assert.NoError(t, e)
+
+				return tx
+			},
+		},
+		//
 		{
 			name: "Process first task, it put one rollback operation. Return modified transaction.",
 			args: args{
@@ -124,10 +213,10 @@ func TestTransactionProcessing(t *testing.T) {
 					return m, encodedTx
 				},
 			},
-			wantTx: func(t *testing.T, m *transaction.Manager, txID string) transaction.Transaction {
+			wantTx: func(t *testing.T, m *transaction.Manager, txOriginal transaction.Transaction) transaction.Transaction {
 				tx := m.New(
 					// Must be same transaction ID
-					transaction.WithTransactionID(txID),
+					transaction.WithTransactionID(txOriginal.ID()),
 				)
 
 				// Pending only task B
@@ -148,11 +237,12 @@ func TestTransactionProcessing(t *testing.T) {
 				return tx
 			},
 		},
+		//
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			//			t.Parallel()
 
 			mc := gomock.NewController(t)
 			defer mc.Finish()
@@ -179,7 +269,7 @@ func TestTransactionProcessing(t *testing.T) {
 			assert.NoError(t, e)
 
 			// Check new transaction
-			wantTx := tt.wantTx(t, m, tx.ID())
+			wantTx := tt.wantTx(t, m, tx)
 			assert.Equal(t, wantTx, newTx)
 		})
 	}
