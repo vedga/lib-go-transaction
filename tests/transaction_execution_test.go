@@ -12,6 +12,38 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
+func TestTransactionDataStack(t *testing.T) {
+	t.Parallel()
+
+	tx := transaction.NewManager().New()
+
+	assert.Zero(t, tx.DataCount())
+
+	tx.PushData(data.Bytes{1, 2, 3})
+	assert.Equal(t, 1, tx.DataCount())
+
+	got, present := tx.PopData()
+	assert.True(t, present)
+	assert.Equal(t, data.Bytes{1, 2, 3}, got)
+
+	_, present = tx.PopData()
+	assert.False(t, present)
+
+	// Multiple items (check order)
+	tx.PushData(data.Bytes{1, 2, 3}, data.Bytes{4, 5, 6})
+	assert.Equal(t, 2, tx.DataCount())
+
+	// Last item now at top
+	got, present = tx.PopData()
+	assert.True(t, present)
+	assert.Equal(t, data.Bytes{4, 5, 6}, got)
+
+	// First item is last
+	got, present = tx.PopData()
+	assert.True(t, present)
+	assert.Equal(t, data.Bytes{1, 2, 3}, got)
+}
+
 func TestTransactionProcessing(t *testing.T) {
 	t.Parallel()
 
