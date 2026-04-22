@@ -1,6 +1,8 @@
 package transaction
 
 import (
+	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -74,6 +76,44 @@ func WithTxTaskProducer(kind string, producer TaskProducer) Option {
 	return func(i *Manager) {
 		i.taskOptions = append(i.taskOptions, WithTaskProducer(kind, producer))
 	}
+}
+
+// Run transaction
+// Try to execute one task from transaction. Possible cases:
+// - transaction operation complete, ACK transaction receiver, nothing to send
+// - transaction task operation complete, ACK transaction receiver, send returned transaction to further processing
+// - transaction task operation complete, ACK transaction receiver, nothing to send because use outbox pattern
+// - transaction task can't be processed now, don't ACK transaction (retry same transaction after some time)
+// - transaction task isn't supported, ACK transaction receiver and nothing to send
+//
+// I.e. any errors isn't specified as ErrXXX cause to put incoming transaction to the DLQ as invalid or retry exceed.
+// Non-nil returned transaction cause ACK transaction receiver and send new transaction to further processing.
+func (i *Manager) Run(ctx context.Context, encodedTx data.Bytes, setup ...data.Setup) (Transaction, error) {
+	// Attempt to decode transaction
+	kind, tx, e := i.Decode(encodedTx, setup...)
+	if e != nil {
+		// Unsupported transaction type
+		return nil, e
+	}
+
+	if e = tx.Run(ctx, kind, nil); e == nil {
+		// Transaction task processing successful, ACK transaction.
+		// If transaction contain pending tasks send it (exception: when used outbox pattern don't send transaction)
+		return tx, nil
+	}
+
+	if errors.Is(e, ErrNoAvailableTasks) {
+		// No available tasks indicate transaction must be ACKed but don't resend
+		return nil, nil
+	}
+
+	var retryIndicator *RetryTaskError
+	if errors.As(e, &retryIndicator) {
+		// Restore transaction from backup and check remaining attempts
+		tx, e = i.RestoreCheckRetry(encodedTx, retryIndicator)
+	}
+
+	return tx, e
 }
 
 // RestoreCheckRetry restore transaction and check if retry limit exceed

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/vedga/lib-go-transaction/data"
 	"github.com/vedga/lib-go-transaction/deque"
@@ -14,6 +15,7 @@ type (
 	// Transaction interface declaration
 	Transaction interface {
 		Task
+		ID() string
 		Encode() (data.Bytes, error)
 		AddTask(kind string, setup ...data.Setup) error
 		AddRollbackTask(kind string, setup ...data.Setup) error
@@ -27,33 +29,44 @@ type (
 
 	// implementation of the transaction task
 	implementation struct {
-		manager *Manager
-		// ID of the transaction
-		ID string
-		// RollbackIndicator if true currant action is transaction rollback
-		RollbackIndicator bool
-		// Attempt of task execution
-		Attempt uint
-		// PendingTasks contain tasks sequence for execute transaction
-		PendingTasks *deque.Deque[data.Bytes]
-		// RollbackStack contain transaction rollback sequence
-		RollbackStack *deque.Deque[data.Bytes]
+		manager           *Manager
+		TxID              string                   `json:"id"`
+		RollbackIndicator bool                     `json:"ri"`
+		Attempt           uint                     // TODO: Remove?
+		PendingTasks      *deque.Deque[data.Bytes] `json:"p"`
+		RollbackStack     *deque.Deque[data.Bytes] `json:"r"`
 	}
 )
 
-func withConstructor(ID string) data.Setup {
+var (
+	// ErrNoAvailableTasks indicate no available tasks inside transaction
+	ErrNoAvailableTasks = errors.New("no available tasks")
+)
+
+func withConstructor(txID string) data.Setup {
 	return data.NewSetup[implementation](func(o *implementation) error {
-		o.ID = ID
 		o.PendingTasks = deque.New[data.Bytes](0)
 		o.RollbackStack = deque.New[data.Bytes](0)
 
-		return nil
+		// Also setup transaction ID
+		setup := WithTransactionID(txID)
+
+		return setup(o)
 	})
 }
 
 func withTransactionManager(manager *Manager) data.Setup {
 	return data.NewSetup[implementation](func(o *implementation) error {
 		o.manager = manager
+
+		return nil
+	})
+}
+
+// WithTransactionID set transaction ID
+func WithTransactionID(txID string) data.Setup {
+	return data.NewSetup[implementation](func(o *implementation) error {
+		o.TxID = txID
 
 		return nil
 	})
@@ -67,7 +80,9 @@ func withTransactionManager(manager *Manager) data.Setup {
 // is backup transaction before calling Run() method and if got ErrRetryTask error restore original transaction from
 // the backup.
 func (i *implementation) Run(ctx context.Context, txKind string, tx Transaction) error {
-	_ = txKind
+	if !strings.EqualFold(txKind, TxKind) {
+		return errors.New("unsupported transaction")
+	}
 
 	if tx != nil {
 		return errors.New("nested transactions are not supported")
@@ -79,10 +94,16 @@ func (i *implementation) Run(ctx context.Context, txKind string, tx Transaction)
 		i.Attempt = 0
 
 		// Execute task
-		return task.Run(ctx, taskKind, tx)
+		return task.Run(ctx, taskKind, i)
 	}
 
-	return nil
+	// No available tasks in this transaction
+	return ErrNoAvailableTasks
+}
+
+// ID return transaction ID
+func (i *implementation) ID() string {
+	return i.TxID
 }
 
 // Encode transaction context to the byte sequence
@@ -107,6 +128,7 @@ func (i *implementation) nextTask() (string, Task) {
 		}
 	}
 
+	// No more tasks or task type isn't supported
 	return ``, nil
 }
 

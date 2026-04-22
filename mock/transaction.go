@@ -94,6 +94,20 @@ func (mr *MockTransactionMockRecorder) Encode() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Encode", reflect.TypeOf((*MockTransaction)(nil).Encode))
 }
 
+// ID mocks base method.
+func (m *MockTransaction) ID() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ID")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// ID indicates an expected call of ID.
+func (mr *MockTransactionMockRecorder) ID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ID", reflect.TypeOf((*MockTransaction)(nil).ID))
+}
+
 // NewTask mocks base method.
 func (m *MockTransaction) NewTask(kind string, setup ...data.Setup) (transaction.Task, error) {
 	m.ctrl.T.Helper()
