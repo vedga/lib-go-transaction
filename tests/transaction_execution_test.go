@@ -46,6 +46,79 @@ func TestTransactionProcessing(t *testing.T) {
 		wantTx  func(t *testing.T, m *transaction.Manager, txOriginal transaction.Transaction) transaction.Transaction
 	}{
 		{
+			name: "Execute last task in the transaction",
+			args: args{
+				newTransaction: func(t *testing.T, mc *gomock.Controller) (*transaction.Manager, data.Bytes) {
+					ta := mock.NewMockTask(mc)
+					tb := mock.NewMockTask(mc)
+
+					// Создаем менеджер с двумя задачами
+					m := transaction.NewManager(
+						transaction.WithTxTaskProducer(kindA, func(setup ...data.Setup) (transaction.Task, error) {
+							producer := data.NewProducer[taskA]()
+
+							task, e := producer(append([]data.Setup{
+								// Имплементация taskA
+								data.NewSetup[taskA](func(o *taskA) error {
+									o.MockTask = ta
+									return nil
+								}),
+							}, setup...)...)
+							if e != nil {
+								return nil, e
+							}
+
+							return data.As[transaction.Task](task)
+						}),
+						transaction.WithTxTaskProducer(kindB, func(setup ...data.Setup) (transaction.Task, error) {
+							producer := data.NewProducer[taskB]()
+
+							task, e := producer(append([]data.Setup{
+								// Имплементация taskA
+								data.NewSetup[taskB](func(o *taskB) error {
+									o.MockTask = tb
+									return nil
+								}),
+							}, setup...)...)
+							if e != nil {
+								return nil, e
+							}
+
+							return data.As[transaction.Task](task)
+						}),
+					)
+
+					tx := m.New()
+
+					e := tx.AddTask(kindA)
+					assert.NoError(t, e)
+
+					gomock.InOrder(
+						ta.EXPECT().Run(
+							gomock.Any(),
+							gomock.Eq(kindA),
+							gomock.Any(),
+						).DoAndReturn(func(_ context.Context, _ string, _ transaction.Transaction) error {
+
+							// Task return no errors
+							return nil
+						}),
+					)
+
+					var encodedTx data.Bytes
+					encodedTx, e = tx.Encode()
+					assert.NoError(t, e)
+
+					return m, encodedTx
+				},
+			},
+			wantErr: nil,
+			wantTx: func(t *testing.T, m *transaction.Manager, txOriginal transaction.Transaction) transaction.Transaction {
+				return nil
+			},
+		},
+		//
+		{
 			name: "Process first task with retry limit exceed.",
 			args: args{
 				newTransaction: func(t *testing.T, mc *gomock.Controller) (*transaction.Manager, data.Bytes) {
@@ -482,7 +555,7 @@ func TestTransactionExecution(t *testing.T) {
 				statuses: []error{
 					// No errors indicate transaction finished or can't be processed
 					transaction.ErrRetryTask,
-					nil,
+					transaction.ErrNoAvailableTasks,
 					transaction.ErrNoAvailableTasks,
 				},
 			},

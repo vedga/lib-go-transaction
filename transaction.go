@@ -95,7 +95,16 @@ func (i *implementation) Run(ctx context.Context, txKind string, tx Transaction)
 		i.TaskAttempt = 0
 
 		// Execute task
-		return task.Run(ctx, taskKind, i)
+		e := task.Run(ctx, taskKind, i)
+		if e != nil {
+			// Some error occurred
+			return e
+		}
+
+		if i.taskQueue().Size() > 0 {
+			// Transaction is not complete
+			return nil
+		}
 	}
 
 	// No available tasks in this transaction
@@ -118,12 +127,7 @@ func (i *implementation) Encode() (data.Bytes, error) {
 }
 
 func (i *implementation) nextTask() (string, Task) {
-	var q *deque.Deque[data.Bytes]
-	if i.RollbackIndicator {
-		q = i.RollbackStack
-	} else {
-		q = i.PendingTasks
-	}
+	q := i.taskQueue()
 
 	if encoded, present := q.PopFront(); present {
 		// Not all tasks complete
@@ -136,6 +140,14 @@ func (i *implementation) nextTask() (string, Task) {
 
 	// No more tasks or task type isn't supported
 	return ``, nil
+}
+
+func (i *implementation) taskQueue() *deque.Deque[data.Bytes] {
+	if i.RollbackIndicator {
+		return i.RollbackStack
+	}
+
+	return i.PendingTasks
 }
 
 // SetRollback transaction indicator
