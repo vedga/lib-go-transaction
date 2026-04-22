@@ -11,7 +11,7 @@ import (
 type (
 	// Task interface declaration
 	Task interface {
-		Run(ctx context.Context, tx Transaction) error
+		Run(ctx context.Context, kind string, tx Transaction) error
 	}
 
 	// TaskManager implementation

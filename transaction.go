@@ -65,18 +65,20 @@ func withTransactionManager(manager *Manager) data.Setup {
 // Predefined error ErrRetryTask indicate than transaction must be retried after some time. Suggested implementation
 // is backup transaction before calling Run() method and if got ErrRetryTask error restore original transaction from
 // the backup.
-func (i *implementation) Run(ctx context.Context, tx Transaction) error {
+func (i *implementation) Run(ctx context.Context, txKind string, tx Transaction) error {
+	_ = txKind
+
 	if tx != nil {
 		return errors.New("nested transactions are not supported")
 	}
 
-	if _, task := i.nextTask(); task != nil {
+	if taskKind, task := i.nextTask(); task != nil {
 		// Task supported by this implementation, reset attempt counter because transaction may be backup in the
 		// task if outbox pattern is used.
 		i.Attempt = 0
 
 		// Execute task
-		return task.Run(ctx, tx)
+		return task.Run(ctx, taskKind, tx)
 	}
 
 	return nil
@@ -84,7 +86,7 @@ func (i *implementation) Run(ctx context.Context, tx Transaction) error {
 
 // Encode transaction context to the byte sequence
 func (i *implementation) Encode() (data.Bytes, error) {
-	return i.manager.Encode(txKind, i)
+	return i.manager.Encode(TxKind, i)
 }
 
 func (i *implementation) nextTask() (string, Task) {

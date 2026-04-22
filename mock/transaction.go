@@ -157,17 +157,17 @@ func (mr *MockTransactionMockRecorder) QueueTask(kind, task any) *gomock.Call {
 }
 
 // Run mocks base method.
-func (m *MockTransaction) Run(ctx context.Context, tx transaction.Transaction) error {
+func (m *MockTransaction) Run(ctx context.Context, kind string, tx transaction.Transaction) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", ctx, tx)
+	ret := m.ctrl.Call(m, "Run", ctx, kind, tx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockTransactionMockRecorder) Run(ctx, tx any) *gomock.Call {
+func (mr *MockTransactionMockRecorder) Run(ctx, kind, tx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockTransaction)(nil).Run), ctx, tx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockTransaction)(nil).Run), ctx, kind, tx)
 }
 
 // SetRollback mocks base method.

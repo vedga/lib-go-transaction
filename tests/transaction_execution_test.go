@@ -115,6 +115,7 @@ func TestTransactionExecution(t *testing.T) {
 							Run(
 								gomock.Any(),
 								gomock.Any(),
+								gomock.Any(),
 							).
 							Return(transaction.NewRetryTaskError(1)),
 						// kindA - second attempt
@@ -122,11 +123,13 @@ func TestTransactionExecution(t *testing.T) {
 							Run(
 								gomock.Any(),
 								gomock.Any(),
+								gomock.Any(),
 							).
 							Return(nil),
 						// kindB
 						tb.EXPECT().
 							Run(
+								gomock.Any(),
 								gomock.Any(),
 								gomock.Any(),
 							).
@@ -274,7 +277,7 @@ func TestTransactionExecution(t *testing.T) {
 				backup, e := tx.Encode()
 				assert.NoError(t, e)
 
-				e = tx.Run(context.Background(), nil)
+				e = tx.Run(context.Background(), transaction.TxKind, nil)
 
 				assert.Condition(t, func() bool {
 					return errors.Is(e, wantError)
@@ -287,7 +290,7 @@ func TestTransactionExecution(t *testing.T) {
 					assert.NoError(t, e)
 
 					// Required task retry execution
-					e = tx.Run(context.Background(), nil)
+					e = tx.Run(context.Background(), transaction.TxKind, nil)
 					// After retry, we expect successful task execution
 					assert.NoError(t, e)
 				}

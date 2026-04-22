@@ -21,7 +21,8 @@ type (
 )
 
 const (
-	txKind = `1.0`
+	// TxKind is default transaction container type
+	TxKind = `1.0`
 )
 
 // NewManager return new transaction manager implementation
@@ -39,7 +40,7 @@ func NewManager(options ...Option) *Manager {
 
 	// Task manager for transaction itself
 	i.txManager = NewTaskManager(
-		WithTaskProducer(txKind, func(setup ...data.Setup) (Task, error) {
+		WithTaskProducer(TxKind, func(setup ...data.Setup) (Task, error) {
 			producer := data.NewProducer[implementation]()
 
 			tx, e := producer(
@@ -113,7 +114,7 @@ func (i *Manager) Decode(source data.Bytes, setup ...data.Setup) (string, Transa
 
 // New return new transaction
 func (i *Manager) New(setup ...data.Setup) (tx Transaction) {
-	task, e := i.txManager.NewTask(txKind, setup...)
+	task, e := i.txManager.NewTask(TxKind, setup...)
 	if e != nil {
 		panic(fmt.Errorf(`unexpected transaction builder error: %v`, e))
 	}
