@@ -128,6 +128,20 @@ func (mr *MockTransactionMockRecorder) NextAttempt(maxRetries any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NextAttempt", reflect.TypeOf((*MockTransaction)(nil).NextAttempt), maxRetries)
 }
 
+// QueueEncodedTask mocks base method.
+func (m *MockTransaction) QueueEncodedTask(encodedTask data.Bytes) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "QueueEncodedTask", encodedTask)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// QueueEncodedTask indicates an expected call of QueueEncodedTask.
+func (mr *MockTransactionMockRecorder) QueueEncodedTask(encodedTask any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueueEncodedTask", reflect.TypeOf((*MockTransaction)(nil).QueueEncodedTask), encodedTask)
+}
+
 // QueueRollbackTask mocks base method.
 func (m *MockTransaction) QueueRollbackTask(kind string, task transaction.Task) error {
 	m.ctrl.T.Helper()

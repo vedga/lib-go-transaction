@@ -18,6 +18,7 @@ type (
 		AddTask(kind string, setup ...data.Setup) error
 		AddRollbackTask(kind string, setup ...data.Setup) error
 		QueueTask(kind string, task Task) error
+		QueueEncodedTask(encodedTask data.Bytes) error
 		QueueRollbackTask(kind string, task Task) error
 		SetRollback() error
 		NewTask(kind string, setup ...data.Setup) (Task, error)
@@ -150,6 +151,11 @@ func (i *implementation) QueueTask(kind string, task Task) error {
 		return e
 	}
 
+	return i.QueueEncodedTask(encodedTask)
+}
+
+// QueueEncodedTask add encoded task to the transaction
+func (i *implementation) QueueEncodedTask(encodedTask data.Bytes) error {
 	// Normal task order
 	i.PendingTasks.PushBack(encodedTask)
 
