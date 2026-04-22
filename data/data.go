@@ -27,11 +27,12 @@ func NewProducer[T any]() Producer {
 // NewSetup return setup implementation for specified type
 func NewSetup[T any](setup func(*T) error) Setup {
 	return func(v any) error {
-		if o, compatible := v.(*T); compatible {
-			return setup(o)
+		p, e := As[*T](v)
+		if e != nil {
+			return e
 		}
 
-		return ErrInvalidTransformation
+		return setup(p)
 	}
 }
 
