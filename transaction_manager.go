@@ -80,11 +80,12 @@ func WithTxTaskProducer(kind string, producer TaskProducer) Option {
 
 // Run transaction
 // Try to execute one task from transaction. Possible cases:
-// - transaction operation complete, ACK transaction receiver, nothing to send
-// - transaction task operation complete, ACK transaction receiver, send returned transaction to further processing
-// - transaction task operation complete, ACK transaction receiver, nothing to send because use outbox pattern
-// - transaction task can't be processed now, don't ACK transaction (retry same transaction after some time)
-// - transaction task isn't supported, ACK transaction receiver and nothing to send
+// (nil,nil) - transaction operation complete, ACK transaction receiver, nothing to send
+// (tx,nil) - transaction task operation complete, ACK transaction receiver, send returned transaction to further processing
+// (nil,nil) - transaction task operation complete, ACK transaction receiver, nothing to send because use outbox pattern
+// (tx,nil) - transaction task can't be processed now retry limit isn't exceed, ACK transaction receiver, send returned transaction to further processing
+// (nil, ErrRetryLimitExceeded) - task execution retry limit exceed, ACK transaction receiver, original transaction put to the DLQ
+// (nil,nil) - transaction task isn't supported, ACK transaction receiver and nothing to send
 //
 // I.e. any errors isn't specified as ErrXXX cause to put incoming transaction to the DLQ as invalid or retry exceed.
 // Non-nil returned transaction cause ACK transaction receiver and send new transaction to further processing.
