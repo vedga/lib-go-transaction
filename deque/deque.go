@@ -54,13 +54,13 @@ func (d *Deque[T]) UnmarshalJSON(raw []byte) error {
 }
 
 // PushFront добавляет элемент в начало очереди
-func (d *Deque[T]) PushFront(item T) {
-	d.items = append([]T{item}, d.items...)
+func (d *Deque[T]) PushFront(items ...T) {
+	d.items = append(items, d.items...)
 }
 
 // PushBack добавляет элемент в конец очереди
-func (d *Deque[T]) PushBack(item T) {
-	d.items = append(d.items, item)
+func (d *Deque[T]) PushBack(items ...T) {
+	d.items = append(d.items, items...)
 }
 
 // PopFront удаляет и возвращает элемент из начала очереди
