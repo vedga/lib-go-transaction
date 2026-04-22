@@ -173,6 +173,9 @@ func (i *implementation) Rollback() error {
 
 	i.RollbackIndicator = true
 
+	// Data stack not used in rollback mode
+	i.ClearData()
+
 	return nil
 }
 
