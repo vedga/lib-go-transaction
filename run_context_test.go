@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAttempt(t *testing.T) {
+func TestRunContext(t *testing.T) {
 	t.Parallel()
 
 	type (
@@ -18,25 +18,33 @@ func TestAttempt(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want uint
+		want *RunCtx
 	}{
 		{
-			name: "With value in the context present (0)",
+			name: "With value in the context present (0) and rollback indicator is true",
 			args: args{
 				ctx: func() context.Context {
-					return withTaskContext(context.Background(), 0)
+					return withRunContext(context.Background(), &RunCtx{
+						Rollback: true,
+					})
 				}(),
 			},
-			want: 0,
+			want: &RunCtx{
+				Rollback: true,
+			},
 		},
 		{
 			name: "With value in the context present (1)",
 			args: args{
 				ctx: func() context.Context {
-					return withTaskContext(context.Background(), 1)
+					return withRunContext(context.Background(), &RunCtx{
+						Attempt: 1,
+					})
 				}(),
 			},
-			want: 1,
+			want: &RunCtx{
+				Attempt: 1,
+			},
 		},
 		{
 			name: "With no Attempt value in the context",
@@ -45,14 +53,14 @@ func TestAttempt(t *testing.T) {
 					return context.Background()
 				}(),
 			},
-			want: 0,
+			want: nil,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := Attempt(tt.args.ctx)
+			got := RunContext(tt.args.ctx)
 
 			assert.Equal(t, tt.want, got)
 		})
