@@ -122,6 +122,8 @@ func TestTransactionLife(t *testing.T) {
 
 			manager, tx := tt.simulator(t, mc)
 
+			ixID := tx.ID()
+
 			for tx != nil {
 				encodedTx, e := tx.Encode()
 				assert.NoError(t, e)
@@ -136,6 +138,11 @@ func TestTransactionLife(t *testing.T) {
 
 					// Test complete by expected error
 					return
+				}
+
+				if tx != nil {
+					// Transaction ID must be same
+					assert.Equal(t, ixID, tx.ID())
 				}
 			}
 		})
