@@ -271,7 +271,7 @@ func (i *implementation) NewTask(kind string, setup ...data.Setup) (Task, error)
 func (i *implementation) NextAttempt(maxRetries uint) error {
 	i.TaskAttempt++
 
-	if i.TaskAttempt > maxRetries {
+	if i.TaskAttempt >= maxRetries {
 		// Retry limit exceed
 		return ErrRetryLimitExceeded
 	}

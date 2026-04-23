@@ -488,7 +488,7 @@ func TestTransactionProcessing(t *testing.T) {
 						).DoAndReturn(func(_ context.Context, _ string, _ transaction.Transaction) error {
 
 							// Task return retry request
-							return transaction.NewRetryTaskError(1)
+							return transaction.NewRetryTaskError(2)
 						}),
 					)
 
@@ -771,7 +771,7 @@ func TestTransactionExecution(t *testing.T) {
 								gomock.Any(),
 								gomock.Any(),
 							).
-							Return(transaction.NewRetryTaskError(1)),
+							Return(transaction.NewRetryTaskError(2)),
 						// kindA - second attempt
 						ta.EXPECT().
 							Run(
