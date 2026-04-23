@@ -17,7 +17,6 @@ type (
 	Transaction interface {
 		Task
 		ID() string
-		Attempt() uint
 		Encode() (data.Bytes, error)
 		AddTask(kind string, setup ...data.Setup) error
 		AddRollbackTask(kind string, setup ...data.Setup) error

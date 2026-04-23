@@ -79,20 +79,6 @@ func (mr *MockTransactionMockRecorder) AddTask(kind any, setup ...any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTask", reflect.TypeOf((*MockTransaction)(nil).AddTask), varargs...)
 }
 
-// Attempt mocks base method.
-func (m *MockTransaction) Attempt() uint {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Attempt")
-	ret0, _ := ret[0].(uint)
-	return ret0
-}
-
-// Attempt indicates an expected call of Attempt.
-func (mr *MockTransactionMockRecorder) Attempt() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Attempt", reflect.TypeOf((*MockTransaction)(nil).Attempt))
-}
-
 // ClearData mocks base method.
 func (m *MockTransaction) ClearData() {
 	m.ctrl.T.Helper()
