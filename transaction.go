@@ -98,12 +98,15 @@ func (i *implementation) Run(ctx context.Context, txKind string, tx Transaction)
 	}
 
 	if taskKind, task := i.nextTask(); task != nil {
+		// Real attempt number passed via execution context
+		taskCtx := withTaskContext(ctx, i.TaskAttempt)
+
 		// Task supported by this implementation, reset attempt counter because transaction may be backup in the
 		// task if outbox pattern is used.
 		i.TaskAttempt = 0
 
 		// Execute task
-		e := task.Run(ctx, taskKind, i)
+		e := task.Run(taskCtx, taskKind, i)
 		if e != nil {
 			// Some error occurred
 			if errors.Is(e, ErrOutboxPattern) {
@@ -118,6 +121,8 @@ func (i *implementation) Run(ctx context.Context, txKind string, tx Transaction)
 			// Transaction is not complete
 			return nil
 		}
+
+		// Transaction operation complete
 	}
 
 	// No available tasks in this transaction
