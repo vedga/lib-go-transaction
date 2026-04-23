@@ -13,21 +13,31 @@ import (
 )
 
 func TestTransactionLife(t *testing.T) {
+	t.Parallel()
+
 	type (
 		taskA struct {
 			*mock.MockTask
-			Int int
 		}
 		taskB struct {
 			*mock.MockTask
-			String string
+		}
+		taskC struct {
+			*mock.MockTask
+		}
+		taskD struct {
+			*mock.MockTask
 		}
 	)
 
 	const (
 		kindA = `taskA`
 		kindB = `taskB`
+		kindC = `taskC`
+		kindD = `taskD`
 	)
+
+	unexpectedError := errors.New("unexpected error")
 
 	tests := []struct {
 		name      string
@@ -432,10 +442,140 @@ func TestTransactionLife(t *testing.T) {
 			},
 			wantError: nil,
 		},
+		//
+		{
+			name: "Execute in order A, B with rollback on task B, but it return unexpected error",
+			simulator: func(t *testing.T, mc *gomock.Controller) (*transaction.Manager, transaction.Transaction) {
+				ta := mock.NewMockTask(mc)
+				tb := mock.NewMockTask(mc)
+				tc := mock.NewMockTask(mc)
+				td := mock.NewMockTask(mc)
+
+				manager := transaction.NewManager(
+					// Task A
+					transaction.WithTxTaskProducer(kindA, func(setup ...data.Setup) (transaction.Task, error) {
+						producer := data.NewProducer[taskA]()
+
+						task, e := producer(append([]data.Setup{
+							// Имплементация taskA
+							data.NewSetup[taskA](func(o *taskA) error {
+								o.MockTask = ta
+								return nil
+							}),
+						}, setup...)...)
+						if e != nil {
+							return nil, e
+						}
+
+						return data.As[transaction.Task](task)
+					}),
+					// Task B
+					transaction.WithTxTaskProducer(kindB, func(setup ...data.Setup) (transaction.Task, error) {
+						producer := data.NewProducer[taskB]()
+
+						task, e := producer(append([]data.Setup{
+							// Имплементация taskA
+							data.NewSetup[taskB](func(o *taskB) error {
+								o.MockTask = tb
+								return nil
+							}),
+						}, setup...)...)
+						if e != nil {
+							return nil, e
+						}
+
+						return data.As[transaction.Task](task)
+					}),
+					// Task C
+					transaction.WithTxTaskProducer(kindC, func(setup ...data.Setup) (transaction.Task, error) {
+						producer := data.NewProducer[taskC]()
+
+						task, e := producer(append([]data.Setup{
+							// Имплементация taskA
+							data.NewSetup[taskC](func(o *taskC) error {
+								o.MockTask = tc
+								return nil
+							}),
+						}, setup...)...)
+						if e != nil {
+							return nil, e
+						}
+
+						return data.As[transaction.Task](task)
+					}),
+					// Task D
+					transaction.WithTxTaskProducer(kindD, func(setup ...data.Setup) (transaction.Task, error) {
+						producer := data.NewProducer[taskD]()
+
+						task, e := producer(append([]data.Setup{
+							// Имплементация taskA
+							data.NewSetup[taskD](func(o *taskD) error {
+								o.MockTask = td
+								return nil
+							}),
+						}, setup...)...)
+						if e != nil {
+							return nil, e
+						}
+
+						return data.As[transaction.Task](task)
+					}),
+				)
+
+				tx := manager.New()
+
+				e := tx.AddTask(kindA)
+				assert.NoError(t, e)
+
+				e = tx.AddTask(kindB)
+				assert.NoError(t, e)
+
+				gomock.InOrder(
+					ta.
+						EXPECT().
+						Run(
+							gomock.Any(),
+							gomock.Any(),
+							gomock.Any(),
+						).
+						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
+							assert.Equal(t, uint(0), transaction.Attempt(ctx))
+
+							e := tx.AddRollbackTask(kindC)
+							assert.NoError(t, e)
+
+							return nil
+						}),
+					tb.
+						EXPECT().
+						Run(
+							gomock.Any(),
+							gomock.Any(),
+							gomock.Any(),
+						).
+						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
+							assert.Equal(t, uint(0), transaction.Attempt(ctx))
+
+							e := tx.AddRollbackTask(kindD)
+							assert.NoError(t, e)
+
+							// Initiate rollback by task B
+							e = tx.Rollback()
+							assert.NoError(t, e)
+
+							return unexpectedError
+						}),
+				)
+
+				return manager, tx
+			},
+			wantError: unexpectedError,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
 			mc := gomock.NewController(t)
 			defer mc.Finish()
