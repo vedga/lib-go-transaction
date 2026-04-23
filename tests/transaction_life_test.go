@@ -1,0 +1,143 @@
+package tests
+
+import (
+	"context"
+	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	transaction "github.com/vedga/lib-go-transaction"
+	"github.com/vedga/lib-go-transaction/data"
+	mock "github.com/vedga/lib-go-transaction/mock"
+	"go.uber.org/mock/gomock"
+)
+
+func TestTransactionLife(t *testing.T) {
+	type (
+		taskA struct {
+			*mock.MockTask
+			Int int
+		}
+		taskB struct {
+			*mock.MockTask
+			String string
+		}
+	)
+
+	const (
+		kindA = `taskA`
+		kindB = `taskB`
+	)
+
+	tests := []struct {
+		name      string
+		simulator func(t *testing.T, mc *gomock.Controller) (*transaction.Manager, transaction.Transaction)
+		wantError error
+	}{
+		{
+			name: "Execute in order A, B w/o errors",
+			simulator: func(t *testing.T, mc *gomock.Controller) (*transaction.Manager, transaction.Transaction) {
+				ta := mock.NewMockTask(mc)
+				tb := mock.NewMockTask(mc)
+
+				manager := transaction.NewManager(
+					// Task A
+					transaction.WithTxTaskProducer(kindA, func(setup ...data.Setup) (transaction.Task, error) {
+						producer := data.NewProducer[taskA]()
+
+						task, e := producer(append([]data.Setup{
+							// Имплементация taskA
+							data.NewSetup[taskA](func(o *taskA) error {
+								o.MockTask = ta
+								return nil
+							}),
+						}, setup...)...)
+						if e != nil {
+							return nil, e
+						}
+
+						return data.As[transaction.Task](task)
+					}),
+					// Task B
+					transaction.WithTxTaskProducer(kindB, func(setup ...data.Setup) (transaction.Task, error) {
+						producer := data.NewProducer[taskB]()
+
+						task, e := producer(append([]data.Setup{
+							// Имплементация taskA
+							data.NewSetup[taskB](func(o *taskB) error {
+								o.MockTask = tb
+								return nil
+							}),
+						}, setup...)...)
+						if e != nil {
+							return nil, e
+						}
+
+						return data.As[transaction.Task](task)
+					}),
+				)
+
+				tx := manager.New()
+
+				e := tx.AddTask(kindA)
+				assert.NoError(t, e)
+
+				e = tx.AddTask(kindB)
+				assert.NoError(t, e)
+
+				gomock.InOrder(
+					ta.
+						EXPECT().
+						Run(
+							gomock.Any(),
+							gomock.Any(),
+							gomock.Any(),
+						).
+						Return(
+							nil,
+						),
+					tb.
+						EXPECT().
+						Run(
+							gomock.Any(),
+							gomock.Any(),
+							gomock.Any(),
+						).
+						Return(
+							nil,
+						),
+				)
+
+				return manager, tx
+			},
+			wantError: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			mc := gomock.NewController(t)
+			defer mc.Finish()
+
+			manager, tx := tt.simulator(t, mc)
+
+			for tx != nil {
+				encodedTx, e := tx.Encode()
+				assert.NoError(t, e)
+
+				// Execute task
+				tx, e = manager.Run(context.Background(), encodedTx)
+
+				if e != nil {
+					assert.Condition(t, func() bool {
+						return errors.Is(e, tt.wantError)
+					})
+
+					// Test complete by expected error
+					return
+				}
+			}
+		})
+	}
+}
