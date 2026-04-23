@@ -99,9 +99,9 @@ func (i *implementation) Run(ctx context.Context, txKind string, tx Transaction)
 
 	if taskKind, task := i.nextTask(); task != nil {
 		// Real attempt number passed via execution context
-		taskCtx := withRunContext(ctx, &RunCtx{
-			Rollback: i.RollbackIndicator,
-			Attempt:  i.TaskAttempt,
+		taskCtx := withRunContext(ctx, &runContextImplementation{
+			rollback: i.RollbackIndicator,
+			attempt:  i.TaskAttempt,
 		})
 
 		// Task supported by this implementation, reset attempt counter because transaction may be backup in the

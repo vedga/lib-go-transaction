@@ -107,8 +107,8 @@ func TestTransactionLife(t *testing.T) {
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							runCtx := transaction.RunContext(ctx)
 							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt)
-							assert.Equal(t, false, runCtx.Rollback)
+							assert.Equal(t, uint(0), runCtx.Attempt())
+							assert.Equal(t, false, runCtx.Rollback())
 
 							_ = tx
 
@@ -125,8 +125,8 @@ func TestTransactionLife(t *testing.T) {
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							runCtx := transaction.RunContext(ctx)
 							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(1), runCtx.Attempt)
-							assert.Equal(t, false, runCtx.Rollback)
+							assert.Equal(t, uint(1), runCtx.Attempt())
+							assert.Equal(t, false, runCtx.Rollback())
 
 							_ = tx
 
@@ -143,8 +143,8 @@ func TestTransactionLife(t *testing.T) {
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							runCtx := transaction.RunContext(ctx)
 							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(2), runCtx.Attempt)
-							assert.Equal(t, false, runCtx.Rollback)
+							assert.Equal(t, uint(2), runCtx.Attempt())
+							assert.Equal(t, false, runCtx.Rollback())
 
 							_ = tx
 
@@ -220,8 +220,8 @@ func TestTransactionLife(t *testing.T) {
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							runCtx := transaction.RunContext(ctx)
 							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt)
-							assert.Equal(t, false, runCtx.Rollback)
+							assert.Equal(t, uint(0), runCtx.Attempt())
+							assert.Equal(t, false, runCtx.Rollback())
 
 							_ = tx
 
@@ -238,8 +238,8 @@ func TestTransactionLife(t *testing.T) {
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							runCtx := transaction.RunContext(ctx)
 							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(1), runCtx.Attempt)
-							assert.Equal(t, false, runCtx.Rollback)
+							assert.Equal(t, uint(1), runCtx.Attempt())
+							assert.Equal(t, false, runCtx.Rollback())
 
 							_ = tx
 
@@ -256,8 +256,8 @@ func TestTransactionLife(t *testing.T) {
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							runCtx := transaction.RunContext(ctx)
 							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(2), runCtx.Attempt)
-							assert.Equal(t, false, runCtx.Rollback)
+							assert.Equal(t, uint(2), runCtx.Attempt())
+							assert.Equal(t, false, runCtx.Rollback())
 
 							_ = tx
 
@@ -274,8 +274,8 @@ func TestTransactionLife(t *testing.T) {
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							runCtx := transaction.RunContext(ctx)
 							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt)
-							assert.Equal(t, false, runCtx.Rollback)
+							assert.Equal(t, uint(0), runCtx.Attempt())
+							assert.Equal(t, false, runCtx.Rollback())
 
 							_ = tx
 
@@ -350,8 +350,8 @@ func TestTransactionLife(t *testing.T) {
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							runCtx := transaction.RunContext(ctx)
 							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt)
-							assert.Equal(t, false, runCtx.Rollback)
+							assert.Equal(t, uint(0), runCtx.Attempt())
+							assert.Equal(t, false, runCtx.Rollback())
 
 							_ = tx
 
@@ -367,8 +367,8 @@ func TestTransactionLife(t *testing.T) {
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							runCtx := transaction.RunContext(ctx)
 							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt)
-							assert.Equal(t, false, runCtx.Rollback)
+							assert.Equal(t, uint(0), runCtx.Attempt())
+							assert.Equal(t, false, runCtx.Rollback())
 
 							_ = tx
 
@@ -443,8 +443,8 @@ func TestTransactionLife(t *testing.T) {
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							runCtx := transaction.RunContext(ctx)
 							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt)
-							assert.Equal(t, false, runCtx.Rollback)
+							assert.Equal(t, uint(0), runCtx.Attempt())
+							assert.Equal(t, false, runCtx.Rollback())
 
 							e := tx.AddRollbackTask(kindB)
 							assert.NoError(t, e)
@@ -461,8 +461,8 @@ func TestTransactionLife(t *testing.T) {
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							runCtx := transaction.RunContext(ctx)
 							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt)
-							assert.Equal(t, false, runCtx.Rollback)
+							assert.Equal(t, uint(0), runCtx.Attempt())
+							assert.Equal(t, false, runCtx.Rollback())
 
 							e := tx.AddRollbackTask(kindA)
 							assert.NoError(t, e)
@@ -574,8 +574,8 @@ func TestTransactionLife(t *testing.T) {
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							runCtx := transaction.RunContext(ctx)
 							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt)
-							assert.Equal(t, false, runCtx.Rollback)
+							assert.Equal(t, uint(0), runCtx.Attempt())
+							assert.Equal(t, false, runCtx.Rollback())
 
 							e := tx.AddRollbackTask(kindC)
 							assert.NoError(t, e)
@@ -592,8 +592,8 @@ func TestTransactionLife(t *testing.T) {
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							runCtx := transaction.RunContext(ctx)
 							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt)
-							assert.Equal(t, false, runCtx.Rollback)
+							assert.Equal(t, uint(0), runCtx.Attempt())
+							assert.Equal(t, false, runCtx.Rollback())
 
 							e := tx.AddRollbackTask(kindD)
 							assert.NoError(t, e)
@@ -709,8 +709,8 @@ func TestTransactionLife(t *testing.T) {
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							runCtx := transaction.RunContext(ctx)
 							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt)
-							assert.Equal(t, false, runCtx.Rollback)
+							assert.Equal(t, uint(0), runCtx.Attempt())
+							assert.Equal(t, false, runCtx.Rollback())
 
 							e := tx.AddRollbackTask(kindC)
 							assert.NoError(t, e)
@@ -727,8 +727,8 @@ func TestTransactionLife(t *testing.T) {
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							runCtx := transaction.RunContext(ctx)
 							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt)
-							assert.Equal(t, false, runCtx.Rollback)
+							assert.Equal(t, uint(0), runCtx.Attempt())
+							assert.Equal(t, false, runCtx.Rollback())
 
 							e := tx.AddRollbackTask(kindD)
 							assert.NoError(t, e)
@@ -750,8 +750,8 @@ func TestTransactionLife(t *testing.T) {
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							runCtx := transaction.RunContext(ctx)
 							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt)
-							assert.Equal(t, true, runCtx.Rollback)
+							assert.Equal(t, uint(0), runCtx.Attempt())
+							assert.Equal(t, true, runCtx.Rollback())
 
 							_ = tx
 
@@ -768,8 +768,8 @@ func TestTransactionLife(t *testing.T) {
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							runCtx := transaction.RunContext(ctx)
 							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt)
-							assert.Equal(t, true, runCtx.Rollback)
+							assert.Equal(t, uint(0), runCtx.Attempt())
+							assert.Equal(t, true, runCtx.Rollback())
 
 							_ = tx
 
