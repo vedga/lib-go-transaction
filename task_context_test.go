@@ -8,6 +8,8 @@ import (
 )
 
 func TestAttempt(t *testing.T) {
+	t.Parallel()
+
 	type (
 		args struct {
 			ctx context.Context
@@ -19,7 +21,16 @@ func TestAttempt(t *testing.T) {
 		want uint
 	}{
 		{
-			name: "With value in the context present",
+			name: "With value in the context present (0)",
+			args: args{
+				ctx: func() context.Context {
+					return withTaskContext(context.Background(), 0)
+				}(),
+			},
+			want: 0,
+		},
+		{
+			name: "With value in the context present (1)",
 			args: args{
 				ctx: func() context.Context {
 					return withTaskContext(context.Background(), 1)
@@ -39,6 +50,8 @@ func TestAttempt(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := Attempt(tt.args.ctx)
 
 			assert.Equal(t, tt.want, got)
