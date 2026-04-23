@@ -94,8 +94,10 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 							gomock.Any(),
 						).
-						DoAndReturn(func(ctx context.Context, _ string, task transaction.Task) error {
+						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							assert.Equal(t, uint(0), transaction.Attempt(ctx))
+
+							_ = tx
 
 							return transaction.NewRetryTaskError(3)
 						}),
@@ -107,8 +109,10 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 							gomock.Any(),
 						).
-						DoAndReturn(func(ctx context.Context, _ string, task transaction.Task) error {
+						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							assert.Equal(t, uint(1), transaction.Attempt(ctx))
+
+							_ = tx
 
 							return transaction.NewRetryTaskError(3)
 						}),
@@ -120,8 +124,10 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 							gomock.Any(),
 						).
-						DoAndReturn(func(ctx context.Context, _ string, task transaction.Task) error {
+						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							assert.Equal(t, uint(2), transaction.Attempt(ctx))
+
+							_ = tx
 
 							return transaction.NewRetryTaskError(3)
 						}),
@@ -192,8 +198,10 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 							gomock.Any(),
 						).
-						DoAndReturn(func(ctx context.Context, _ string, task transaction.Task) error {
+						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							assert.Equal(t, uint(0), transaction.Attempt(ctx))
+
+							_ = tx
 
 							return transaction.NewRetryTaskError(3)
 						}),
@@ -205,8 +213,10 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 							gomock.Any(),
 						).
-						DoAndReturn(func(ctx context.Context, _ string, task transaction.Task) error {
+						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							assert.Equal(t, uint(1), transaction.Attempt(ctx))
+
+							_ = tx
 
 							return transaction.NewRetryTaskError(3)
 						}),
@@ -218,8 +228,10 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 							gomock.Any(),
 						).
-						DoAndReturn(func(ctx context.Context, _ string, task transaction.Task) error {
+						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							assert.Equal(t, uint(2), transaction.Attempt(ctx))
+
+							_ = tx
 
 							return nil
 						}),
@@ -231,8 +243,10 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 							gomock.Any(),
 						).
-						DoAndReturn(func(ctx context.Context, _ string, task transaction.Task) error {
+						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							assert.Equal(t, uint(0), transaction.Attempt(ctx))
+
+							_ = tx
 
 							return nil
 						}),
@@ -302,8 +316,10 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 							gomock.Any(),
 						).
-						DoAndReturn(func(ctx context.Context, _ string, task transaction.Task) error {
+						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							assert.Equal(t, uint(0), transaction.Attempt(ctx))
+
+							_ = tx
 
 							return nil
 						}),
@@ -314,8 +330,10 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 							gomock.Any(),
 						).
-						DoAndReturn(func(ctx context.Context, _ string, task transaction.Task) error {
+						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
 							assert.Equal(t, uint(0), transaction.Attempt(ctx))
+
+							_ = tx
 
 							return nil
 						}),
@@ -326,6 +344,94 @@ func TestTransactionLife(t *testing.T) {
 			wantError: nil,
 		},
 		//
+		{
+			name: "Execute in order A, B with possible rollbacks but w/o errors",
+			simulator: func(t *testing.T, mc *gomock.Controller) (*transaction.Manager, transaction.Transaction) {
+				ta := mock.NewMockTask(mc)
+				tb := mock.NewMockTask(mc)
+
+				manager := transaction.NewManager(
+					// Task A
+					transaction.WithTxTaskProducer(kindA, func(setup ...data.Setup) (transaction.Task, error) {
+						producer := data.NewProducer[taskA]()
+
+						task, e := producer(append([]data.Setup{
+							// Имплементация taskA
+							data.NewSetup[taskA](func(o *taskA) error {
+								o.MockTask = ta
+								return nil
+							}),
+						}, setup...)...)
+						if e != nil {
+							return nil, e
+						}
+
+						return data.As[transaction.Task](task)
+					}),
+					// Task B
+					transaction.WithTxTaskProducer(kindB, func(setup ...data.Setup) (transaction.Task, error) {
+						producer := data.NewProducer[taskB]()
+
+						task, e := producer(append([]data.Setup{
+							// Имплементация taskA
+							data.NewSetup[taskB](func(o *taskB) error {
+								o.MockTask = tb
+								return nil
+							}),
+						}, setup...)...)
+						if e != nil {
+							return nil, e
+						}
+
+						return data.As[transaction.Task](task)
+					}),
+				)
+
+				tx := manager.New()
+
+				e := tx.AddTask(kindA)
+				assert.NoError(t, e)
+
+				e = tx.AddTask(kindB)
+				assert.NoError(t, e)
+
+				gomock.InOrder(
+					ta.
+						EXPECT().
+						Run(
+							gomock.Any(),
+							gomock.Any(),
+							gomock.Any(),
+						).
+						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
+							assert.Equal(t, uint(0), transaction.Attempt(ctx))
+
+							e := tx.AddRollbackTask(kindB)
+							assert.NoError(t, e)
+
+							return nil
+						}),
+					tb.
+						EXPECT().
+						Run(
+							gomock.Any(),
+							gomock.Any(),
+							gomock.Any(),
+						).
+						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
+							assert.Equal(t, uint(0), transaction.Attempt(ctx))
+
+							e := tx.AddRollbackTask(kindA)
+							assert.NoError(t, e)
+
+							return nil
+						}),
+				)
+
+				return manager, tx
+			},
+			wantError: nil,
+		},
 	}
 
 	for _, tt := range tests {
