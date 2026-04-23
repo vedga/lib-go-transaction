@@ -13,11 +13,6 @@ import (
 func TestManager_Transaction(t *testing.T) {
 	t.Parallel()
 
-	const (
-		kindA = `taskA`
-		kindB = `taskB`
-	)
-
 	type (
 		taskA struct {
 			*mock.MockTask
@@ -33,9 +28,14 @@ func TestManager_Transaction(t *testing.T) {
 			setup   func(tx transaction.Transaction)
 		}
 	)
+
+	const (
+		kindA = `taskA`
+		kindB = `taskB`
+	)
+
 	tests := []struct {
-		name string
-		//		setup      setup
+		name       string
 		args       args
 		writeError error
 		readError  error
