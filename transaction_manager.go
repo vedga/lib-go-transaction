@@ -109,29 +109,7 @@ func (i *Manager) Run(ctx context.Context, encodedTx data.Bytes, setup ...data.S
 		return nil, nil
 	}
 
-	var retryIndicator *RetryTaskError
-	if errors.As(e, &retryIndicator) {
-		// Restore transaction from backup and check remaining attempts
-		tx, e = i.RestoreCheckRetry(encodedTx, retryIndicator)
-	}
-
-	return tx, e
-}
-
-// RestoreCheckRetry restore transaction and check if retry limit exceed
-func (i *Manager) RestoreCheckRetry(backup data.Bytes, retryTaskError *RetryTaskError, setup ...data.Setup) (Transaction, error) {
-	_, tx, e := i.Decode(backup, setup...)
-	if e != nil {
-		return nil, e
-	}
-
-	// Check retry attempt.
-	// Note: this operation increase transaction internal retry counter
-	if e = tx.NextAttempt(retryTaskError.maxRetries); e != nil {
-		return nil, fmt.Errorf(`%w: max %d`, e, retryTaskError.maxRetries)
-	}
-
-	return tx, nil
+	return nil, e
 }
 
 // Encode transaction context to the byte sequence

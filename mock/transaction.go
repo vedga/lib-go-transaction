@@ -149,17 +149,17 @@ func (mr *MockTransactionMockRecorder) ID() *gomock.Call {
 }
 
 // MarkRollback mocks base method.
-func (m *MockTransaction) MarkRollback() error {
+func (m *MockTransaction) MarkRollback(cause string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MarkRollback")
+	ret := m.ctrl.Call(m, "MarkRollback", cause)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // MarkRollback indicates an expected call of MarkRollback.
-func (mr *MockTransactionMockRecorder) MarkRollback() *gomock.Call {
+func (mr *MockTransactionMockRecorder) MarkRollback(cause any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkRollback", reflect.TypeOf((*MockTransaction)(nil).MarkRollback))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkRollback", reflect.TypeOf((*MockTransaction)(nil).MarkRollback), cause)
 }
 
 // NewTask mocks base method.
@@ -180,20 +180,6 @@ func (mr *MockTransactionMockRecorder) NewTask(kind any, setup ...any) *gomock.C
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{kind}, setup...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewTask", reflect.TypeOf((*MockTransaction)(nil).NewTask), varargs...)
-}
-
-// NextAttempt mocks base method.
-func (m *MockTransaction) NextAttempt(maxRetries uint) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NextAttempt", maxRetries)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// NextAttempt indicates an expected call of NextAttempt.
-func (mr *MockTransactionMockRecorder) NextAttempt(maxRetries any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NextAttempt", reflect.TypeOf((*MockTransaction)(nil).NextAttempt), maxRetries)
 }
 
 // PopData mocks base method.

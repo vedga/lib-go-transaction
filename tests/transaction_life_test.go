@@ -12,8 +12,6 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-// TODO: ErrMigrate - сохранить контекст задачи в начале очереди задач (или rollback) и вернуть транзакцию. Миграция задачи в другое место.
-// TODO: rollback транзакции делать по возврату ошибки из Run() (кроме ошибок на повторы)
 func TestTransactionLife(t *testing.T) {
 	t.Parallel()
 
@@ -106,7 +104,7 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 							gomock.Any(),
 						).
-						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
+						DoAndReturn(func(_ context.Context, _ string, tx transaction.Transaction) error {
 							assert.Equal(t, uint(0), tx.Attempt())
 							assert.Equal(t, false, tx.Rollback())
 
@@ -122,7 +120,7 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 							gomock.Any(),
 						).
-						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
+						DoAndReturn(func(_ context.Context, _ string, tx transaction.Transaction) error {
 							assert.Equal(t, uint(1), tx.Attempt())
 							assert.Equal(t, false, tx.Rollback())
 
@@ -138,7 +136,7 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 							gomock.Any(),
 						).
-						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
+						DoAndReturn(func(_ context.Context, _ string, tx transaction.Transaction) error {
 							assert.Equal(t, uint(2), tx.Attempt())
 							assert.Equal(t, false, tx.Rollback())
 
@@ -213,7 +211,7 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 							gomock.Any(),
 						).
-						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
+						DoAndReturn(func(_ context.Context, _ string, tx transaction.Transaction) error {
 							assert.Equal(t, uint(0), tx.Attempt())
 							assert.Equal(t, false, tx.Rollback())
 
@@ -229,7 +227,7 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 							gomock.Any(),
 						).
-						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
+						DoAndReturn(func(_ context.Context, _ string, tx transaction.Transaction) error {
 							assert.Equal(t, uint(1), tx.Attempt())
 							assert.Equal(t, false, tx.Rollback())
 
@@ -245,7 +243,7 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 							gomock.Any(),
 						).
-						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
+						DoAndReturn(func(_ context.Context, _ string, tx transaction.Transaction) error {
 							assert.Equal(t, uint(2), tx.Attempt())
 							assert.Equal(t, false, tx.Rollback())
 
@@ -261,7 +259,7 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 							gomock.Any(),
 						).
-						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
+						DoAndReturn(func(_ context.Context, _ string, tx transaction.Transaction) error {
 							assert.Equal(t, uint(0), tx.Attempt())
 							assert.Equal(t, false, tx.Rollback())
 
@@ -335,7 +333,7 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 							gomock.Any(),
 						).
-						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
+						DoAndReturn(func(_ context.Context, _ string, tx transaction.Transaction) error {
 							assert.Equal(t, uint(0), tx.Attempt())
 							assert.Equal(t, false, tx.Rollback())
 
@@ -350,7 +348,7 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 							gomock.Any(),
 						).
-						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
+						DoAndReturn(func(_ context.Context, _ string, tx transaction.Transaction) error {
 							assert.Equal(t, uint(0), tx.Attempt())
 							assert.Equal(t, false, tx.Rollback())
 
@@ -424,7 +422,7 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 							gomock.Any(),
 						).
-						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
+						DoAndReturn(func(_ context.Context, _ string, tx transaction.Transaction) error {
 							assert.Equal(t, uint(0), tx.Attempt())
 							assert.Equal(t, false, tx.Rollback())
 
@@ -440,7 +438,7 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 							gomock.Any(),
 						).
-						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
+						DoAndReturn(func(_ context.Context, _ string, tx transaction.Transaction) error {
 							assert.Equal(t, uint(0), tx.Attempt())
 							assert.Equal(t, false, tx.Rollback())
 
@@ -457,7 +455,7 @@ func TestTransactionLife(t *testing.T) {
 		},
 		//
 		{
-			name: "Execute in order A, B with rollback on task B, but it return unexpected error",
+			name: "Execute in order A, B with rollback on task B, but it return unexpected error (transaction rolled back)",
 			simulator: func(t *testing.T, mc *gomock.Controller) (*transaction.Manager, transaction.Transaction) {
 				ta := mock.NewMockTask(mc)
 				tb := mock.NewMockTask(mc)
@@ -551,7 +549,7 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 							gomock.Any(),
 						).
-						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
+						DoAndReturn(func(_ context.Context, _ string, tx transaction.Transaction) error {
 							assert.Equal(t, uint(0), tx.Attempt())
 							assert.Equal(t, false, tx.Rollback())
 
@@ -567,23 +565,208 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 							gomock.Any(),
 						).
-						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
+						DoAndReturn(func(_ context.Context, _ string, tx transaction.Transaction) error {
 							assert.Equal(t, uint(0), tx.Attempt())
 							assert.Equal(t, false, tx.Rollback())
 
+							// This rollback action must be executed at rollback sequence
 							e := tx.AddRollbackTask(kindD)
 							assert.NoError(t, e)
 
-							// Initiate rollback by task B
-							e = tx.MarkRollback()
+							// Return unexpectedError cause transaction rolled back
+							return unexpectedError
+						}),
+					td.
+						EXPECT().
+						Run(
+							gomock.Any(),
+							gomock.Any(),
+							gomock.Any(),
+						).
+						DoAndReturn(func(_ context.Context, _ string, tx transaction.Transaction) error {
+							assert.Equal(t, uint(0), tx.Attempt())
+							assert.Equal(t, true, tx.Rollback())
+
+							// Rollback task D done
+							return nil
+						}),
+					tc.
+						EXPECT().
+						Run(
+							gomock.Any(),
+							gomock.Any(),
+							gomock.Any(),
+						).
+						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
+							assert.Equal(t, uint(0), tx.Attempt())
+							assert.Equal(t, true, tx.Rollback())
+
+							// Rollback task C done
+							return nil
+						}),
+				)
+
+				return manager, tx
+			},
+			// Transaction successful rolled back
+			wantError: nil,
+		},
+		//
+		{
+			name: "Execute in order A, B with rollback on task B, but it return unexpected error and rollback also return unexpected error",
+			simulator: func(t *testing.T, mc *gomock.Controller) (*transaction.Manager, transaction.Transaction) {
+				ta := mock.NewMockTask(mc)
+				tb := mock.NewMockTask(mc)
+				tc := mock.NewMockTask(mc)
+				td := mock.NewMockTask(mc)
+
+				manager := transaction.NewManager(
+					// Task A
+					transaction.WithTxTaskProducer(kindA, func(setup ...data.Setup) (transaction.Task, error) {
+						producer := data.NewProducer[taskA]()
+
+						task, e := producer(append([]data.Setup{
+							// Имплементация taskA
+							data.NewSetup[taskA](func(o *taskA) error {
+								o.MockTask = ta
+								return nil
+							}),
+						}, setup...)...)
+						if e != nil {
+							return nil, e
+						}
+
+						return data.As[transaction.Task](task)
+					}),
+					// Task B
+					transaction.WithTxTaskProducer(kindB, func(setup ...data.Setup) (transaction.Task, error) {
+						producer := data.NewProducer[taskB]()
+
+						task, e := producer(append([]data.Setup{
+							// Имплементация taskA
+							data.NewSetup[taskB](func(o *taskB) error {
+								o.MockTask = tb
+								return nil
+							}),
+						}, setup...)...)
+						if e != nil {
+							return nil, e
+						}
+
+						return data.As[transaction.Task](task)
+					}),
+					// Task C
+					transaction.WithTxTaskProducer(kindC, func(setup ...data.Setup) (transaction.Task, error) {
+						producer := data.NewProducer[taskC]()
+
+						task, e := producer(append([]data.Setup{
+							// Имплементация taskA
+							data.NewSetup[taskC](func(o *taskC) error {
+								o.MockTask = tc
+								return nil
+							}),
+						}, setup...)...)
+						if e != nil {
+							return nil, e
+						}
+
+						return data.As[transaction.Task](task)
+					}),
+					// Task D
+					transaction.WithTxTaskProducer(kindD, func(setup ...data.Setup) (transaction.Task, error) {
+						producer := data.NewProducer[taskD]()
+
+						task, e := producer(append([]data.Setup{
+							// Имплементация taskA
+							data.NewSetup[taskD](func(o *taskD) error {
+								o.MockTask = td
+								return nil
+							}),
+						}, setup...)...)
+						if e != nil {
+							return nil, e
+						}
+
+						return data.As[transaction.Task](task)
+					}),
+				)
+
+				tx := manager.New()
+
+				e := tx.AddTask(kindA)
+				assert.NoError(t, e)
+
+				e = tx.AddTask(kindB)
+				assert.NoError(t, e)
+
+				gomock.InOrder(
+					ta.
+						EXPECT().
+						Run(
+							gomock.Any(),
+							gomock.Any(),
+							gomock.Any(),
+						).
+						DoAndReturn(func(_ context.Context, _ string, tx transaction.Transaction) error {
+							assert.Equal(t, uint(0), tx.Attempt())
+							assert.Equal(t, false, tx.Rollback())
+
+							e := tx.AddRollbackTask(kindC)
 							assert.NoError(t, e)
 
+							return nil
+						}),
+					tb.
+						EXPECT().
+						Run(
+							gomock.Any(),
+							gomock.Any(),
+							gomock.Any(),
+						).
+						DoAndReturn(func(_ context.Context, _ string, tx transaction.Transaction) error {
+							assert.Equal(t, uint(0), tx.Attempt())
+							assert.Equal(t, false, tx.Rollback())
+
+							// This rollback action must be executed at rollback sequence
+							e := tx.AddRollbackTask(kindD)
+							assert.NoError(t, e)
+
+							// Return unexpectedError cause transaction rolled back
+							return unexpectedError
+						}),
+					td.
+						EXPECT().
+						Run(
+							gomock.Any(),
+							gomock.Any(),
+							gomock.Any(),
+						).
+						DoAndReturn(func(_ context.Context, _ string, tx transaction.Transaction) error {
+							assert.Equal(t, uint(0), tx.Attempt())
+							assert.Equal(t, true, tx.Rollback())
+
+							// Rollback task D done
+							return nil
+						}),
+					tc.
+						EXPECT().
+						Run(
+							gomock.Any(),
+							gomock.Any(),
+							gomock.Any(),
+						).
+						DoAndReturn(func(_ context.Context, _ string, tx transaction.Transaction) error {
+							assert.Equal(t, uint(0), tx.Attempt())
+							assert.Equal(t, true, tx.Rollback())
+
+							// Rollback task C alse return unexpected error
 							return unexpectedError
 						}),
 				)
 
 				return manager, tx
 			},
+			// Transaction rollback failed
 			wantError: unexpectedError,
 		},
 		//
@@ -706,7 +889,7 @@ func TestTransactionLife(t *testing.T) {
 							assert.NoError(t, e)
 
 							// Initiate rollback by task B
-							e = tx.MarkRollback()
+							e = tx.MarkRollback(unexpectedError.Error())
 							assert.NoError(t, e)
 
 							return nil

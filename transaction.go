@@ -29,9 +29,8 @@ type (
 		PopData() (data.Bytes, bool)
 		DataCount() int
 		ClearData()
-		MarkRollback() error
+		MarkRollback(cause string) error
 		NewTask(kind string, setup ...data.Setup) (Task, error)
-		NextAttempt(maxRetries uint) error
 	}
 
 	// taskContext is dynamic task execution context
@@ -46,6 +45,7 @@ type (
 		taskContext       *taskContext
 		TxID              string                   `json:"id"`
 		RollbackIndicator bool                     `json:"ri"`
+		RollbackCause     string                   `json:"rc"`
 		TaskAttempt       uint                     `json:"ta"`
 		PendingTasks      *deque.Deque[data.Bytes] `json:"tq"`
 		RollbackStack     *deque.Deque[data.Bytes] `json:"rs"`
@@ -106,12 +106,13 @@ func (i *implementation) Run(ctx context.Context, txKind string, tx Transaction)
 		return errors.New("nested transactions are not supported")
 	}
 
-	if taskKind, task := i.nextTask(); task != nil {
+	if taskKind, task, backup := i.nextTask(); task != nil {
 		// Real attempt number passed via execution context, backup transaction state
-		i.taskContext = &taskContext{
+		taskCtx := taskContext{
 			rollbackIndicator: i.RollbackIndicator,
 			taskAttempt:       i.TaskAttempt,
 		}
+		i.taskContext = &taskCtx
 
 		// Task supported by this implementation, reset attempt counter because transaction may be backup in the
 		// task if outbox pattern is used.
@@ -126,15 +127,53 @@ func (i *implementation) Run(ctx context.Context, txKind string, tx Transaction)
 		if e != nil {
 			// Some error occurred
 			if errors.Is(e, ErrOutboxPattern) {
-				// Using outbox pattern indicate no more tasks in this tran
+				// Using outbox pattern indicate no more tasks can be processed now
 				return ErrNoAvailableTasks
 			}
 
-			return e
+			if errors.Is(e, ErrMigrate) {
+				// Task migrate request. Encode possible modified task
+				if backup, e = i.manager.EncodeTask(taskKind, task); e != nil {
+					return fmt.Errorf("task '%s' migration error: %w", taskKind, e)
+				}
+
+				// Always first attempt if migration requested
+				taskCtx.taskAttempt = 0
+
+				// Simulate task retry
+				e = NewRetryTaskError(1)
+			}
+
+			var retryIndicator *RetryTaskError
+			if errors.As(e, &retryIndicator) {
+				// Task request retry operation
+				i.TaskAttempt = taskCtx.taskAttempt
+
+				if e = i.nextAttempt(retryIndicator.maxRetries); e != nil {
+					// Retry attempts limit exceed
+					return e
+				}
+
+				// Put task to the top of queue
+				i.retryTask(backup)
+
+				// Task complete but transaction isn't finished yet
+				return nil
+			}
+
+			// Any unexpected errors cause rollback transaction
+			e = fmt.Errorf("task '%s' error: %w", taskKind, e)
+			if i.MarkRollback(e.Error()) == nil {
+				// Transaction about rolled back
+				return nil
+			}
+
+			// Transaction rollback failed (unexpected error while transaction in rollback state)
+			return fmt.Errorf("rollback operation error: %w", e)
 		}
 
 		if i.taskQueue().Size() > 0 {
-			// Transaction is not complete
+			// Current task operation complete but transaction have more pending tasks
 			return nil
 		}
 
@@ -164,7 +203,8 @@ func (i *implementation) Encode() (data.Bytes, error) {
 	return i.manager.Encode(TxKind, i)
 }
 
-func (i *implementation) nextTask() (string, Task) {
+// nextTask return next task for processing, depending on from rollback indicator
+func (i *implementation) nextTask() (string, Task, data.Bytes) {
 	q := i.taskQueue()
 
 	if encoded, present := q.PopFront(); present {
@@ -172,12 +212,20 @@ func (i *implementation) nextTask() (string, Task) {
 		// Note: task removed from current transaction at this point
 		if kind, task, e := i.manager.DecodeTask(encoded); e == nil && task != nil {
 			// Task supported by this implementation
-			return kind, task
+			return kind, task, encoded
 		}
 	}
 
 	// No more tasks or task type isn't supported
-	return ``, nil
+	return ``, nil, nil
+}
+
+// retryTask retry task execution
+func (i *implementation) retryTask(encoded data.Bytes) {
+	q := i.taskQueue()
+
+	// Put task to the front of queue
+	q.PushFront(encoded)
 }
 
 func (i *implementation) taskQueue() *deque.Deque[data.Bytes] {
@@ -189,18 +237,26 @@ func (i *implementation) taskQueue() *deque.Deque[data.Bytes] {
 }
 
 // MarkRollback mark transaction for rollback
-func (i *implementation) MarkRollback() error {
+func (i *implementation) MarkRollback(cause string) error {
 	if i.RollbackIndicator {
 		// Already at rollback state
 		return errors.New("invalid transaction state")
 	}
 
 	i.RollbackIndicator = true
+	i.RollbackCause = cause
 
 	// Data stack not used in rollback mode
 	i.ClearData()
 
+	// Also no more pending tasks in the transaction
+	i.clearPendingTasks()
+
 	return nil
+}
+
+func (i *implementation) clearPendingTasks() {
+	i.PendingTasks.Clear()
 }
 
 // Rollback indicator
@@ -295,9 +351,9 @@ func (i *implementation) NewTask(kind string, setup ...data.Setup) (Task, error)
 	return i.manager.NewTask(kind, setup...)
 }
 
-// NextAttempt check if next retry attempt is possible
+// nextAttempt check if next retry attempt is possible
 // Note: This operation increase internal retry counter
-func (i *implementation) NextAttempt(maxRetries uint) error {
+func (i *implementation) nextAttempt(maxRetries uint) error {
 	i.TaskAttempt++
 
 	if i.TaskAttempt >= maxRetries {

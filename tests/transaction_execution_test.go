@@ -158,9 +158,28 @@ func TestTransactionProcessing(t *testing.T) {
 					return m, encodedTx
 				},
 			},
-			wantErr: errUnexpected,
-			wantTx: func(_ *testing.T, _ *transaction.Manager, _ transaction.Transaction) transaction.Transaction {
-				return nil
+			// On unexpected error transaction is being rolled back
+			wantErr: nil,
+			wantTx: func(t *testing.T, m *transaction.Manager, txOriginal transaction.Transaction) transaction.Transaction {
+				tx := m.New(
+					// Must be same transaction ID
+					transaction.WithTransactionID(txOriginal.ID()),
+				)
+
+				task, e := tx.NewTask(kindA, data.NewSetup[taskA](func(o *taskA) error {
+					// Additional setup for taskA
+					o.Field = -1234
+					return nil
+				}))
+				assert.NoError(t, e)
+
+				e = tx.QueueRollbackTask(kindA, task)
+				assert.NoError(t, e)
+
+				e = tx.MarkRollback(`task 'taskA' error: unexpected error`)
+				assert.NoError(t, e)
+
+				return tx
 			},
 		},
 		//
@@ -429,96 +448,98 @@ func TestTransactionProcessing(t *testing.T) {
 				return nil
 			},
 		},
-		//
-		{
-			name: "Process first task with retry not exceed. Return modified transaction.",
-			args: args{
-				newTransaction: func(t *testing.T, mc *gomock.Controller) (*transaction.Manager, data.Bytes) {
-					ta := mock.NewMockTask(mc)
-					tb := mock.NewMockTask(mc)
+		/*
+			// TODO: Unable to test case because no methods for set current transaction attempt value
+			{
+				name: "Process first task with retry not exceed. Return modified transaction.",
+				args: args{
+					newTransaction: func(t *testing.T, mc *gomock.Controller) (*transaction.Manager, data.Bytes) {
+						ta := mock.NewMockTask(mc)
+						tb := mock.NewMockTask(mc)
 
-					// Создаем менеджер с двумя задачами
-					m := transaction.NewManager(
-						transaction.WithTxTaskProducer(kindA, func(setup ...data.Setup) (transaction.Task, error) {
-							producer := data.NewProducer[taskA]()
+						// Создаем менеджер с двумя задачами
+						m := transaction.NewManager(
+							transaction.WithTxTaskProducer(kindA, func(setup ...data.Setup) (transaction.Task, error) {
+								producer := data.NewProducer[taskA]()
 
-							task, e := producer(append([]data.Setup{
-								// Имплементация taskA
-								data.NewSetup[taskA](func(o *taskA) error {
-									o.MockTask = ta
-									return nil
-								}),
-							}, setup...)...)
-							if e != nil {
-								return nil, e
-							}
+								task, e := producer(append([]data.Setup{
+									// Имплементация taskA
+									data.NewSetup[taskA](func(o *taskA) error {
+										o.MockTask = ta
+										return nil
+									}),
+								}, setup...)...)
+								if e != nil {
+									return nil, e
+								}
 
-							return data.As[transaction.Task](task)
-						}),
-						transaction.WithTxTaskProducer(kindB, func(setup ...data.Setup) (transaction.Task, error) {
-							producer := data.NewProducer[taskB]()
+								return data.As[transaction.Task](task)
+							}),
+							transaction.WithTxTaskProducer(kindB, func(setup ...data.Setup) (transaction.Task, error) {
+								producer := data.NewProducer[taskB]()
 
-							task, e := producer(append([]data.Setup{
-								// Имплементация taskA
-								data.NewSetup[taskB](func(o *taskB) error {
-									o.MockTask = tb
-									return nil
-								}),
-							}, setup...)...)
-							if e != nil {
-								return nil, e
-							}
+								task, e := producer(append([]data.Setup{
+									// Имплементация taskA
+									data.NewSetup[taskB](func(o *taskB) error {
+										o.MockTask = tb
+										return nil
+									}),
+								}, setup...)...)
+								if e != nil {
+									return nil, e
+								}
 
-							return data.As[transaction.Task](task)
-						}),
+								return data.As[transaction.Task](task)
+							}),
+						)
+
+						tx := m.New()
+
+						e := tx.AddTask(kindA)
+						assert.NoError(t, e)
+						e = tx.AddTask(kindB)
+						assert.NoError(t, e)
+
+						gomock.InOrder(
+							ta.EXPECT().Run(
+								gomock.Any(),
+								gomock.Eq(kindA),
+								gomock.Any(),
+							).DoAndReturn(func(_ context.Context, _ string, _ transaction.Transaction) error {
+
+								// Task return retry request
+								return transaction.NewRetryTaskError(2)
+							}),
+						)
+
+						var encodedTx data.Bytes
+						encodedTx, e = tx.Encode()
+						assert.NoError(t, e)
+
+						return m, encodedTx
+					},
+				},
+				wantErr: nil,
+				wantTx: func(t *testing.T, m *transaction.Manager, txOriginal transaction.Transaction) transaction.Transaction {
+					tx := m.New(
+						// Must be same transaction ID
+						transaction.WithTransactionID(txOriginal.ID()),
 					)
 
-					tx := m.New()
+					//				e := tx.NextAttempt(1)
 
+					// Pending task A
 					e := tx.AddTask(kindA)
 					assert.NoError(t, e)
+
+					// Pending task B
 					e = tx.AddTask(kindB)
 					assert.NoError(t, e)
 
-					gomock.InOrder(
-						ta.EXPECT().Run(
-							gomock.Any(),
-							gomock.Eq(kindA),
-							gomock.Any(),
-						).DoAndReturn(func(_ context.Context, _ string, _ transaction.Transaction) error {
-
-							// Task return retry request
-							return transaction.NewRetryTaskError(2)
-						}),
-					)
-
-					var encodedTx data.Bytes
-					encodedTx, e = tx.Encode()
-					assert.NoError(t, e)
-
-					return m, encodedTx
+					return tx
 				},
 			},
-			wantErr: nil,
-			wantTx: func(t *testing.T, m *transaction.Manager, txOriginal transaction.Transaction) transaction.Transaction {
-				tx := m.New(
-					// Must be same transaction ID
-					transaction.WithTransactionID(txOriginal.ID()),
-				)
-
-				e := tx.NextAttempt(1)
-
-				// Pending task A
-				e = tx.AddTask(kindA)
-				assert.NoError(t, e)
-
-				// Pending task B
-				e = tx.AddTask(kindB)
-				assert.NoError(t, e)
-
-				return tx
-			},
-		},
+		*/
 		//
 		{
 			name: "Process first task, it put one rollback operation. Return modified transaction.",
@@ -793,9 +814,8 @@ func TestTransactionExecution(t *testing.T) {
 					return m, tx
 				},
 				statuses: []error{
-					// No errors indicate transaction finished or can't be processed
-					transaction.ErrRetryTask,
-					transaction.ErrNoAvailableTasks,
+					nil,
+					nil,
 					transaction.ErrNoAvailableTasks,
 				},
 			},
@@ -926,28 +946,14 @@ func TestTransactionExecution(t *testing.T) {
 			defer mc.Finish()
 
 			m, tx := tt.args.newTransaction(t, mc)
+			_ = m
 
 			for _, wantError := range tt.args.statuses {
-				backup, e := tx.Encode()
-				assert.NoError(t, e)
-
-				e = tx.Run(context.Background(), transaction.TxKind, nil)
+				e := tx.Run(context.Background(), transaction.TxKind, nil)
 
 				assert.Condition(t, func() bool {
 					return errors.Is(e, wantError)
 				})
-
-				var retryIndicator *transaction.RetryTaskError
-				if errors.As(e, &retryIndicator) {
-					// Restore transaction from backup
-					tx, e = m.RestoreCheckRetry(backup, retryIndicator)
-					assert.NoError(t, e)
-
-					// Required task retry execution
-					e = tx.Run(context.Background(), transaction.TxKind, nil)
-					// After retry, we expect successful task execution
-					assert.NoError(t, e)
-				}
 			}
 		})
 	}
