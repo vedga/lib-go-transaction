@@ -79,6 +79,20 @@ func (mr *MockTransactionMockRecorder) AddTask(kind any, setup ...any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTask", reflect.TypeOf((*MockTransaction)(nil).AddTask), varargs...)
 }
 
+// Attempt mocks base method.
+func (m *MockTransaction) Attempt() uint {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Attempt")
+	ret0, _ := ret[0].(uint)
+	return ret0
+}
+
+// Attempt indicates an expected call of Attempt.
+func (mr *MockTransactionMockRecorder) Attempt() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Attempt", reflect.TypeOf((*MockTransaction)(nil).Attempt))
+}
+
 // ClearData mocks base method.
 func (m *MockTransaction) ClearData() {
 	m.ctrl.T.Helper()
@@ -132,6 +146,20 @@ func (m *MockTransaction) ID() string {
 func (mr *MockTransactionMockRecorder) ID() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ID", reflect.TypeOf((*MockTransaction)(nil).ID))
+}
+
+// MarkRollback mocks base method.
+func (m *MockTransaction) MarkRollback() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkRollback")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MarkRollback indicates an expected call of MarkRollback.
+func (mr *MockTransactionMockRecorder) MarkRollback() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkRollback", reflect.TypeOf((*MockTransaction)(nil).MarkRollback))
 }
 
 // NewTask mocks base method.
@@ -242,10 +270,10 @@ func (mr *MockTransactionMockRecorder) QueueTask(kind, task any) *gomock.Call {
 }
 
 // Rollback mocks base method.
-func (m *MockTransaction) Rollback() error {
+func (m *MockTransaction) Rollback() bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Rollback")
-	ret0, _ := ret[0].(error)
+	ret0, _ := ret[0].(bool)
 	return ret0
 }
 

@@ -17,6 +17,8 @@ type (
 	Transaction interface {
 		Task
 		ID() string
+		Attempt() uint
+		Rollback() bool
 		Encode() (data.Bytes, error)
 		AddTask(kind string, setup ...data.Setup) error
 		AddRollbackTask(kind string, setup ...data.Setup) error
@@ -27,14 +29,21 @@ type (
 		PopData() (data.Bytes, bool)
 		DataCount() int
 		ClearData()
-		Rollback() error
+		MarkRollback() error
 		NewTask(kind string, setup ...data.Setup) (Task, error)
 		NextAttempt(maxRetries uint) error
+	}
+
+	// taskContext is dynamic task execution context
+	taskContext struct {
+		rollbackIndicator bool
+		taskAttempt       uint
 	}
 
 	// implementation of the transaction task
 	implementation struct {
 		manager           *Manager
+		taskContext       *taskContext
 		TxID              string                   `json:"id"`
 		RollbackIndicator bool                     `json:"ri"`
 		TaskAttempt       uint                     `json:"ta"`
@@ -98,18 +107,22 @@ func (i *implementation) Run(ctx context.Context, txKind string, tx Transaction)
 	}
 
 	if taskKind, task := i.nextTask(); task != nil {
-		// Real attempt number passed via execution context
-		taskCtx := withRunContext(ctx, &runContextImplementation{
-			rollback: i.RollbackIndicator,
-			attempt:  i.TaskAttempt,
-		})
+		// Real attempt number passed via execution context, backup transaction state
+		i.taskContext = &taskContext{
+			rollbackIndicator: i.RollbackIndicator,
+			taskAttempt:       i.TaskAttempt,
+		}
 
 		// Task supported by this implementation, reset attempt counter because transaction may be backup in the
 		// task if outbox pattern is used.
 		i.TaskAttempt = 0
 
 		// Execute task
-		e := task.Run(taskCtx, taskKind, i)
+		e := task.Run(ctx, taskKind, i)
+
+		// Clear task execution context
+		i.taskContext = nil
+
 		if e != nil {
 			// Some error occurred
 			if errors.Is(e, ErrOutboxPattern) {
@@ -139,6 +152,10 @@ func (i *implementation) ID() string {
 
 // Attempt return task execution attempt
 func (i *implementation) Attempt() uint {
+	if tc := i.taskContext; tc != nil {
+		return tc.taskAttempt
+	}
+
 	return i.TaskAttempt
 }
 
@@ -171,8 +188,8 @@ func (i *implementation) taskQueue() *deque.Deque[data.Bytes] {
 	return i.PendingTasks
 }
 
-// Rollback transaction
-func (i *implementation) Rollback() error {
+// MarkRollback mark transaction for rollback
+func (i *implementation) MarkRollback() error {
 	if i.RollbackIndicator {
 		// Already at rollback state
 		return errors.New("invalid transaction state")
@@ -184,6 +201,15 @@ func (i *implementation) Rollback() error {
 	i.ClearData()
 
 	return nil
+}
+
+// Rollback indicator
+func (i *implementation) Rollback() bool {
+	if tc := i.taskContext; tc != nil {
+		return tc.rollbackIndicator
+	}
+
+	return i.RollbackIndicator
 }
 
 // AddTask add task to the transaction

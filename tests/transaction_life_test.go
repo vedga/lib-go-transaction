@@ -12,6 +12,8 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
+// TODO: ErrMigrate - сохранить контекст задачи в начале очереди задач (или rollback) и вернуть транзакцию. Миграция задачи в другое место.
+// TODO: rollback транзакции делать по возврату ошибки из Run() (кроме ошибок на повторы)
 func TestTransactionLife(t *testing.T) {
 	t.Parallel()
 
@@ -105,10 +107,8 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 						).
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
-							runCtx := transaction.RunContext(ctx)
-							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt())
-							assert.Equal(t, false, runCtx.Rollback())
+							assert.Equal(t, uint(0), tx.Attempt())
+							assert.Equal(t, false, tx.Rollback())
 
 							_ = tx
 
@@ -123,10 +123,8 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 						).
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
-							runCtx := transaction.RunContext(ctx)
-							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(1), runCtx.Attempt())
-							assert.Equal(t, false, runCtx.Rollback())
+							assert.Equal(t, uint(1), tx.Attempt())
+							assert.Equal(t, false, tx.Rollback())
 
 							_ = tx
 
@@ -141,10 +139,8 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 						).
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
-							runCtx := transaction.RunContext(ctx)
-							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(2), runCtx.Attempt())
-							assert.Equal(t, false, runCtx.Rollback())
+							assert.Equal(t, uint(2), tx.Attempt())
+							assert.Equal(t, false, tx.Rollback())
 
 							_ = tx
 
@@ -218,10 +214,8 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 						).
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
-							runCtx := transaction.RunContext(ctx)
-							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt())
-							assert.Equal(t, false, runCtx.Rollback())
+							assert.Equal(t, uint(0), tx.Attempt())
+							assert.Equal(t, false, tx.Rollback())
 
 							_ = tx
 
@@ -236,10 +230,8 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 						).
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
-							runCtx := transaction.RunContext(ctx)
-							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(1), runCtx.Attempt())
-							assert.Equal(t, false, runCtx.Rollback())
+							assert.Equal(t, uint(1), tx.Attempt())
+							assert.Equal(t, false, tx.Rollback())
 
 							_ = tx
 
@@ -254,10 +246,8 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 						).
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
-							runCtx := transaction.RunContext(ctx)
-							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(2), runCtx.Attempt())
-							assert.Equal(t, false, runCtx.Rollback())
+							assert.Equal(t, uint(2), tx.Attempt())
+							assert.Equal(t, false, tx.Rollback())
 
 							_ = tx
 
@@ -272,10 +262,8 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 						).
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
-							runCtx := transaction.RunContext(ctx)
-							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt())
-							assert.Equal(t, false, runCtx.Rollback())
+							assert.Equal(t, uint(0), tx.Attempt())
+							assert.Equal(t, false, tx.Rollback())
 
 							_ = tx
 
@@ -348,10 +336,8 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 						).
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
-							runCtx := transaction.RunContext(ctx)
-							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt())
-							assert.Equal(t, false, runCtx.Rollback())
+							assert.Equal(t, uint(0), tx.Attempt())
+							assert.Equal(t, false, tx.Rollback())
 
 							_ = tx
 
@@ -365,10 +351,8 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 						).
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
-							runCtx := transaction.RunContext(ctx)
-							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt())
-							assert.Equal(t, false, runCtx.Rollback())
+							assert.Equal(t, uint(0), tx.Attempt())
+							assert.Equal(t, false, tx.Rollback())
 
 							_ = tx
 
@@ -441,10 +425,8 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 						).
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
-							runCtx := transaction.RunContext(ctx)
-							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt())
-							assert.Equal(t, false, runCtx.Rollback())
+							assert.Equal(t, uint(0), tx.Attempt())
+							assert.Equal(t, false, tx.Rollback())
 
 							e := tx.AddRollbackTask(kindB)
 							assert.NoError(t, e)
@@ -459,10 +441,8 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 						).
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
-							runCtx := transaction.RunContext(ctx)
-							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt())
-							assert.Equal(t, false, runCtx.Rollback())
+							assert.Equal(t, uint(0), tx.Attempt())
+							assert.Equal(t, false, tx.Rollback())
 
 							e := tx.AddRollbackTask(kindA)
 							assert.NoError(t, e)
@@ -572,10 +552,8 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 						).
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
-							runCtx := transaction.RunContext(ctx)
-							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt())
-							assert.Equal(t, false, runCtx.Rollback())
+							assert.Equal(t, uint(0), tx.Attempt())
+							assert.Equal(t, false, tx.Rollback())
 
 							e := tx.AddRollbackTask(kindC)
 							assert.NoError(t, e)
@@ -590,16 +568,14 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 						).
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
-							runCtx := transaction.RunContext(ctx)
-							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt())
-							assert.Equal(t, false, runCtx.Rollback())
+							assert.Equal(t, uint(0), tx.Attempt())
+							assert.Equal(t, false, tx.Rollback())
 
 							e := tx.AddRollbackTask(kindD)
 							assert.NoError(t, e)
 
 							// Initiate rollback by task B
-							e = tx.Rollback()
+							e = tx.MarkRollback()
 							assert.NoError(t, e)
 
 							return unexpectedError
@@ -707,10 +683,8 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 						).
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
-							runCtx := transaction.RunContext(ctx)
-							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt())
-							assert.Equal(t, false, runCtx.Rollback())
+							assert.Equal(t, uint(0), tx.Attempt())
+							assert.Equal(t, false, tx.Rollback())
 
 							e := tx.AddRollbackTask(kindC)
 							assert.NoError(t, e)
@@ -725,16 +699,14 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 						).
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
-							runCtx := transaction.RunContext(ctx)
-							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt())
-							assert.Equal(t, false, runCtx.Rollback())
+							assert.Equal(t, uint(0), tx.Attempt())
+							assert.Equal(t, false, tx.Rollback())
 
 							e := tx.AddRollbackTask(kindD)
 							assert.NoError(t, e)
 
 							// Initiate rollback by task B
-							e = tx.Rollback()
+							e = tx.MarkRollback()
 							assert.NoError(t, e)
 
 							return nil
@@ -748,10 +720,8 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 						).
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
-							runCtx := transaction.RunContext(ctx)
-							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt())
-							assert.Equal(t, true, runCtx.Rollback())
+							assert.Equal(t, uint(0), tx.Attempt())
+							assert.Equal(t, true, tx.Rollback())
 
 							_ = tx
 
@@ -766,10 +736,8 @@ func TestTransactionLife(t *testing.T) {
 							gomock.Any(),
 						).
 						DoAndReturn(func(ctx context.Context, _ string, tx transaction.Transaction) error {
-							runCtx := transaction.RunContext(ctx)
-							assert.NotNil(t, runCtx)
-							assert.Equal(t, uint(0), runCtx.Attempt())
-							assert.Equal(t, true, runCtx.Rollback())
+							assert.Equal(t, uint(0), tx.Attempt())
+							assert.Equal(t, true, tx.Rollback())
 
 							_ = tx
 
