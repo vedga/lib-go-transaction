@@ -25,6 +25,7 @@ type (
 		QueueTask(kind string, task Task) error
 		QueueEncodedTask(encodedTask data.Bytes) error
 		QueueRollbackTask(kind string, task Task) error
+		EncodeTask(kind string, task Task) (data.Bytes, error)
 		PushData(items ...data.Bytes)
 		PopData() (data.Bytes, bool)
 		DataCount() int
@@ -131,7 +132,7 @@ func (i *implementation) Run(ctx context.Context, txKind string, tx Transaction)
 
 			if errors.Is(e, ErrMigrate) {
 				// Task migrate request. Encode possible modified task
-				if backup, e = i.manager.EncodeTask(taskKind, task); e != nil {
+				if backup, e = i.EncodeTask(taskKind, task); e != nil {
 					return fmt.Errorf("task '%s' migration error: %w", taskKind, e)
 				}
 
@@ -290,7 +291,7 @@ func (i *implementation) AddRollbackTask(kind string, setup ...data.Setup) error
 
 // QueueTask task for execution
 func (i *implementation) QueueTask(kind string, task Task) error {
-	encodedTask, e := i.manager.EncodeTask(kind, task)
+	encodedTask, e := i.EncodeTask(kind, task)
 	if e != nil {
 		return e
 	}
@@ -308,7 +309,7 @@ func (i *implementation) QueueEncodedTask(encodedTask data.Bytes) error {
 
 // QueueRollbackTask for possible rollback
 func (i *implementation) QueueRollbackTask(kind string, task Task) error {
-	encodedTask, e := i.manager.EncodeTask(kind, task)
+	encodedTask, e := i.EncodeTask(kind, task)
 	if e != nil {
 		return e
 	}
@@ -317,6 +318,11 @@ func (i *implementation) QueueRollbackTask(kind string, task Task) error {
 	i.RollbackStack.PushFront(encodedTask)
 
 	return nil
+}
+
+// EncodeTask encode task with transaction rules
+func (i *implementation) EncodeTask(kind string, task Task) (data.Bytes, error) {
+	return i.manager.EncodeTask(kind, task)
 }
 
 // PushData push custom data to the data stack
