@@ -282,7 +282,7 @@ func TestTransactionProcessing(t *testing.T) {
 							assert.Equal(t, newTx, outboxTx)
 
 							// Task use outbox pattern
-							return transaction.ErrOutboxPattern
+							return transaction.ErrNoAvailableTasks
 						}),
 					)
 

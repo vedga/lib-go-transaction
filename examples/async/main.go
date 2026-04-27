@@ -106,7 +106,7 @@ func (i *taskB) Run(ctx context.Context, kind string, tx transaction.Transaction
 	_ = txEncoded
 
 	// Indicate this task use outbox pattern
-	return transaction.ErrOutboxPattern
+	return transaction.ErrNoAvailableTasks
 }
 
 // OperationTaskA return task A with custom initially context
