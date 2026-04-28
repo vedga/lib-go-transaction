@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/vedga/lib-go-transaction/data"
 	"github.com/vedga/lib-go-transaction/deque"
@@ -44,6 +45,7 @@ type (
 	implementation struct {
 		manager           *Manager
 		taskContext       *taskContext
+		mu                sync.Mutex
 		TxID              string                   `json:"id"`
 		RollbackIndicator bool                     `json:"ri"`
 		RollbackCause     string                   `json:"rc"`
@@ -104,6 +106,12 @@ func (i *implementation) Run(ctx context.Context, txKind string, tx Transaction)
 	if tx != nil {
 		return errors.New("nested transactions are not supported")
 	}
+
+	// Only one goroutine can handle Run() method in the transaction.
+	// This lock added for fix race condition check in the buddha package test case.
+	// TODO: Is it right solution?
+	i.mu.Lock()
+	defer i.mu.Unlock()
 
 	if taskKind, task, backup := i.nextTask(); task != nil {
 		// Real attempt number passed via execution context, backup transaction state
