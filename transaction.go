@@ -139,8 +139,8 @@ func (i *implementation) Run(ctx context.Context, txKind string, tx Transaction)
 				// Always first attempt if migration requested
 				taskCtx.taskAttempt = 0
 
-				// Simulate task retry
-				e = NewRetryTaskError(1)
+				// Simulate task retry. Note: really this is second task retry!
+				e = NewRetryTaskError(2)
 			}
 
 			var retryIndicator *RetryTaskError
