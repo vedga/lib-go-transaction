@@ -45,7 +45,7 @@ type (
 	implementation struct {
 		manager           *Manager
 		taskContext       *taskContext
-		mu                sync.Mutex
+		runLocked         sync.Mutex
 		TxID              string                   `json:"id"`
 		RollbackIndicator bool                     `json:"ri"`
 		RollbackCause     string                   `json:"rc"`
@@ -109,9 +109,9 @@ func (i *implementation) Run(ctx context.Context, txKind string, tx Transaction)
 
 	// Only one goroutine can handle Run() method in the transaction.
 	// This lock added for fix race condition check in the buddha package test case.
-	// TODO: Is it right solution?
-	i.mu.Lock()
-	defer i.mu.Unlock()
+	// Right solution: inside running transaction it can be modified and re-run on the concurrent goroutine.
+	i.runLocked.Lock()
+	defer i.runLocked.Unlock()
 
 	if taskKind, task, backup := i.nextTask(); task != nil {
 		// Real attempt number passed via execution context, backup transaction state

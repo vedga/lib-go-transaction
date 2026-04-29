@@ -63,6 +63,9 @@ func (i *Samsara) Rebirth(_ context.Context, tx transaction.Transaction) error {
 
 	i.wg.Add(1)
 	go func() {
+		// Note:
+		// This goroutine can be started before previous method Run() in the aggregates implementation is complete.
+		// Golang detect possible race condition, therefore we must protect transaction Run() method with mutex.
 		defer func() {
 			// Processing operation complete
 			i.wg.Done()
