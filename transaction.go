@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"sync"
 
 	"github.com/vedga/lib-go-transaction/data"
 	"github.com/vedga/lib-go-transaction/deque"
@@ -19,6 +18,7 @@ type (
 		Task
 		ID() string
 		Attempt() uint
+		Clone() Transaction
 		Rollback() bool
 		Encode() (data.Bytes, error)
 		AddTask(kind string, setup ...data.Setup) error
@@ -45,7 +45,6 @@ type (
 	implementation struct {
 		manager           *Manager
 		taskContext       *taskContext
-		runLocked         sync.Mutex
 		TxID              string                   `json:"id"`
 		RollbackIndicator bool                     `json:"ri"`
 		RollbackCause     string                   `json:"rc"`
@@ -106,12 +105,6 @@ func (i *implementation) Run(ctx context.Context, txKind string, tx Transaction)
 	if tx != nil {
 		return errors.New("nested transactions are not supported")
 	}
-
-	// Only one goroutine can handle Run() method in the transaction.
-	// This lock added for fix race condition check in the buddha package test case.
-	// Right solution: inside running transaction it can be modified and re-run on the concurrent goroutine.
-	i.runLocked.Lock()
-	defer i.runLocked.Unlock()
 
 	if taskKind, task, backup := i.nextTask(); task != nil {
 		// Real attempt number passed via execution context, backup transaction state
@@ -203,6 +196,21 @@ func (i *implementation) Attempt() uint {
 	}
 
 	return i.TaskAttempt
+}
+
+// Clone this transaction
+func (i *implementation) Clone() Transaction {
+	return &implementation{
+		manager:           i.manager,
+		taskContext:       nil,
+		TxID:              i.TxID,
+		RollbackIndicator: i.RollbackIndicator,
+		RollbackCause:     i.RollbackCause,
+		TaskAttempt:       i.TaskAttempt,
+		PendingTasks:      deque.Clone(i.PendingTasks),
+		RollbackStack:     deque.Clone(i.RollbackStack),
+		DataStack:         deque.Clone(i.DataStack),
+	}
 }
 
 // Encode transaction context to the byte sequence

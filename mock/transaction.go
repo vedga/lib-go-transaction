@@ -105,6 +105,20 @@ func (mr *MockTransactionMockRecorder) ClearData() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearData", reflect.TypeOf((*MockTransaction)(nil).ClearData))
 }
 
+// Clone mocks base method.
+func (m *MockTransaction) Clone() transaction.Transaction {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Clone")
+	ret0, _ := ret[0].(transaction.Transaction)
+	return ret0
+}
+
+// Clone indicates an expected call of Clone.
+func (mr *MockTransactionMockRecorder) Clone() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Clone", reflect.TypeOf((*MockTransaction)(nil).Clone))
+}
+
 // DataCount mocks base method.
 func (m *MockTransaction) DataCount() int {
 	m.ctrl.T.Helper()

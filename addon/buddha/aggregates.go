@@ -37,7 +37,8 @@ func WithTxTaskProducer(kind string, samsara *Samsara, producer transaction.Task
 // In this point we have dilemma: real task can run in background long time (until it finished or killed by Samsara),
 // but transaction.Transaction Run() method must be finished immoderately for detach transaction from main pipeline.
 // We can make independed copy of original transaction.Transaction or protect Run() method in the transaction by mutex.
-// TODO: What solution is better?
+// Note:
+// Current implementation use transaction clone.
 func (i *aggregates) Run(ctx context.Context, taskKind string, tx transaction.Transaction) error {
 	if i.BirthIndicator {
 		// Execute business task
@@ -46,6 +47,9 @@ func (i *aggregates) Run(ctx context.Context, taskKind string, tx transaction.Tr
 
 	// Prepare task registration
 	i.BirthIndicator = true
+
+	// Clone transaction because we make independent transaction execution path
+	tx = tx.Clone()
 
 	// Re-queue original task to the transaction
 	if e := tx.QueueTask(taskKind, i); e != nil {
