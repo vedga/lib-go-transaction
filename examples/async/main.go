@@ -223,7 +223,7 @@ func main() {
 
 	// At receiver side we can try to execute transaction by following code
 	var newTx transaction.Transaction
-	newTx, e = txManager.Run(context.Background(), encodedTx)
+	newTx, e = txManager.RunEncoded(context.Background(), encodedTx)
 	// Check error, acknowledge message bus to processing message operation complete
 	_ = e
 

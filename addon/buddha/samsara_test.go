@@ -255,7 +255,7 @@ func TestBudda(t *testing.T) {
 			// Wait until task start running. Only for test case!
 			wgTaskStarted.Add(1)
 
-			txNodeA, e = managerNodeA.Run(context.TODO(), encodedA)
+			txNodeA, e = managerNodeA.RunEncoded(context.TODO(), encodedA)
 			assert.NoError(t, e)
 			assert.Nil(t, txNodeA)
 
@@ -295,7 +295,7 @@ func TestBudda(t *testing.T) {
 			encodedB, e = txNodeB.Encode()
 			assert.NoError(t, e)
 
-			txNodeB, e = managerNodeB.Run(context.TODO(), encodedB)
+			txNodeB, e = managerNodeB.RunEncoded(context.TODO(), encodedB)
 			assert.NoError(t, e)
 			assert.Nil(t, txNodeB)
 

@@ -659,14 +659,14 @@ func TestTransactionProcessing(t *testing.T) {
 			m, encodedTx := tt.args.newTransaction(t, mc)
 
 			// Pass to the manager which isn't support this task
-			newTx, e := unsupported.Run(ctx, encodedTx)
+			newTx, e := unsupported.RunEncoded(ctx, encodedTx)
 			// Unsupported task: no errors and newTx is nil
 			// ACK transaction but nothing resend
 			assert.NoError(t, e)
 			assert.Nil(t, newTx)
 
 			// Process supported transaction
-			newTx, e = m.Run(ctx, encodedTx)
+			newTx, e = m.RunEncoded(ctx, encodedTx)
 			assert.Condition(t, func() bool {
 				return errors.Is(e, tt.wantErr)
 			})

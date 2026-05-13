@@ -78,7 +78,7 @@ func WithTxTaskProducer(kind string, producer TaskProducer) Option {
 	}
 }
 
-// Run transaction
+// RunEncoded transaction
 // Try to execute one task from transaction. Possible cases:
 // (nil, nil) - transaction operation complete, ACK transaction receiver, nothing to send
 // (tx, nil) - transaction task operation complete, ACK transaction receiver, send returned transaction to further processing
@@ -90,7 +90,7 @@ func WithTxTaskProducer(kind string, producer TaskProducer) Option {
 //
 // I.e. any errors isn't specified as ErrXXX cause to put incoming transaction to the DLQ as invalid or retry exceed.
 // Non-nil returned transaction cause ACK transaction receiver and send new transaction to further processing.
-func (i *Manager) Run(ctx context.Context, encodedTx data.Bytes, setup ...data.Setup) (Transaction, error) {
+func (i *Manager) RunEncoded(ctx context.Context, encodedTx data.Bytes, setup ...data.Setup) (Transaction, error) {
 	// Attempt to decode transaction
 	kind, tx, e := i.Decode(encodedTx, setup...)
 	if e != nil {
@@ -98,7 +98,13 @@ func (i *Manager) Run(ctx context.Context, encodedTx data.Bytes, setup ...data.S
 		return nil, e
 	}
 
-	if e = tx.Run(ctx, kind, nil); e == nil {
+	return i.Run(ctx, kind, tx)
+}
+
+// Run transaction
+func (i *Manager) Run(ctx context.Context, kind string, tx Transaction) (Transaction, error) {
+	e := tx.Run(ctx, kind, nil)
+	if e == nil {
 		// Transaction task processing successful, ACK transaction.
 		// If transaction contain pending tasks send it (exception: when used outbox pattern don't send transaction)
 		return tx, nil

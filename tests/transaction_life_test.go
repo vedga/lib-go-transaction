@@ -950,7 +950,7 @@ func TestTransactionLife(t *testing.T) {
 				assert.NoError(t, e)
 
 				// Execute task
-				tx, e = manager.Run(context.Background(), encodedTx)
+				tx, e = manager.RunEncoded(context.Background(), encodedTx)
 
 				if e != nil {
 					assert.Condition(t, func() bool {
